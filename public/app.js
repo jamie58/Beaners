@@ -27,6 +27,72 @@ let pendingChoiceCardId = null;
 let previousPhase = null;
 let previousRound = null;
 let timerRenderInterval = null;
+let lastStateForFx = null;
+let lastWarningStage = 0;
+
+const audioSettings = {
+  muted: localStorage.getItem("beanersMuted") === "1",
+  volume: Number(localStorage.getItem("beanersVolume") || "0.55"),
+  haptics: localStorage.getItem("beanersHaptics") !== "0"
+};
+
+const sounds = {};
+["pickup","discard","meld","shuffle","deal","turn","warning","urgent","beaners","scorecard"].forEach(name => {
+  const audio = new Audio(`/audio/${name}.wav`);
+  audio.preload = "auto";
+  sounds[name] = audio;
+});
+
+function playSound(name){
+  if(audioSettings.muted) return;
+  const src = sounds[name];
+  if(!src) return;
+  try{
+    const audio = src.cloneNode();
+    audio.volume = audioSettings.volume;
+    audio.play().catch(() => {});
+  } catch(e){}
+}
+
+function vibrate(pattern){
+  if(!audioSettings.haptics) return;
+  if(navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function updateSoundButtons(){
+  const btn = $("soundToggleBtn");
+  if(btn) btn.textContent = audioSettings.muted ? "🔇" : "🔊";
+  const s = $("soundEnabledStart");
+  if(s) s.checked = !audioSettings.muted;
+  const h = $("hapticsEnabledStart");
+  if(h) h.checked = audioSettings.haptics;
+}
+
+function setMuted(muted){
+  audioSettings.muted = muted;
+  localStorage.setItem("beanersMuted", muted ? "1" : "0");
+  updateSoundButtons();
+}
+
+function setHaptics(enabled){
+  audioSettings.haptics = enabled;
+  localStorage.setItem("beanersHaptics", enabled ? "1" : "0");
+}
+
+function unlockAudio(){
+  // Helps mobile browsers allow later sounds after a user gesture.
+  Object.values(sounds).forEach(a => {
+    try{
+      a.volume = 0;
+      a.play().then(() => {
+        a.pause();
+        a.currentTime = 0;
+        a.volume = audioSettings.volume;
+      }).catch(()=>{});
+    } catch(e){}
+  });
+}
+
 let lastShownScoreRound = null;
 let scorecardTimer = null;
 let audioContext = null;
@@ -48,9 +114,9 @@ $("addBotBtn").onclick = () => socket.emit("addBot", { roomCode: currentRoomCode
 $("fillBotsBtn").onclick = () => socket.emit("fillBots", { roomCode: currentRoomCode });
 $("spinBtn").onclick = () => socket.emit("spinStarter", { roomCode: currentRoomCode });
 $("startBtn").onclick = () => socket.emit("startGame", { roomCode: currentRoomCode });
-$("drawDeckBtn").onclick = () => socket.emit("drawFromDeck", { roomCode: currentRoomCode });
-$("takeTopDiscardBtn").onclick = () => socket.emit("takeTopDiscard", { roomCode: currentRoomCode });
-$("takeAllDiscardBtn").onclick = () => { if(confirm("Pick up the entire discard pile?")) socket.emit("takeAllDiscard", { roomCode: currentRoomCode }); };
+$("drawDeckBtn").onclick = () => { playSound("pickup"); vibrate(20); socket.emit("drawFromDeck", { roomCode: currentRoomCode }); };
+$("takeTopDiscardBtn").onclick = () => { playSound("pickup"); vibrate(20); socket.emit("takeTopDiscard", { roomCode: currentRoomCode }); };
+$("takeAllDiscardBtn").onclick = () => { if(confirm("Pick up the entire discard pile?")) { playSound("shuffle"); vibrate([30,40,30]); socket.emit("takeAllDiscard", { roomCode: currentRoomCode }); } };
 $("nextRoundBtn").onclick = () => socket.emit("nextRound", { roomCode: currentRoomCode });
 
 $("sortNumberBtn").onclick = () => {
@@ -95,6 +161,25 @@ function copyJoinCode(){
 if ($("copyRoomBtn")) $("copyRoomBtn").onclick = copyJoinCode;
 if ($("copyRoomBtn2")) $("copyRoomBtn2").onclick = copyJoinCode;
 
+
+if ($("soundToggleBtn")) {
+  $("soundToggleBtn").onclick = () => {
+    unlockAudio();
+    setMuted(!audioSettings.muted);
+  };
+}
+if ($("soundEnabledStart")) {
+  $("soundEnabledStart").onchange = e => {
+    unlockAudio();
+    setMuted(!e.target.checked);
+  };
+}
+if ($("hapticsEnabledStart")) {
+  $("hapticsEnabledStart").onchange = e => setHaptics(e.target.checked);
+}
+document.addEventListener("click", unlockAudio, { once:true });
+updateSoundButtons();
+
 if ($("roomInput")) {
   $("roomInput").addEventListener("input", () => {
     $("roomInput").value = $("roomInput").value.replace(/\D/g, "").slice(0, 4);
@@ -112,6 +197,7 @@ socket.on("exitedGame", () => {
 $("layMeldBtn").onclick = () => {
   const ids = [...selectedCardIds];
   if(ids.length < 3) return alert("Select at least 3 cards for a meld.");
+  playSound("meld"); vibrate(40);
   socket.emit("layMeld", { roomCode: currentRoomCode, cardIds: ids });
   selectedCardIds.clear();
 };
@@ -119,6 +205,7 @@ $("layMeldBtn").onclick = () => {
 $("discardBtn").onclick = () => {
   const ids = [...selectedCardIds];
   if(ids.length !== 1) return alert("Select exactly 1 card to discard.");
+  playSound("discard"); vibrate(25);
   socket.emit("discardCard", { roomCode: currentRoomCode, cardId: ids[0] });
   selectedCardIds.clear();
 };
@@ -156,6 +243,7 @@ socket.on("starterSpun", ({starterName}) => {
 
 socket.on("roomState", state => {
   const shouldAnimate = state.phase === "playing" && (previousPhase !== "playing" || previousRound !== state.round);
+  handleGameFx(state);
   latestState = state;
   renderState();
   if (shouldAnimate) { showDealAnimation(); playShuffleSound(); }
@@ -205,6 +293,49 @@ socket.on("errorMessage", message => {
   }
 });
 
+
+function handleGameFx(state){
+  const previous = lastStateForFx;
+  if(!previous){
+    lastStateForFx = JSON.parse(JSON.stringify(state));
+    return;
+  }
+
+  const prevMe = previous.players?.find(p => p.id === myPlayerId);
+  const me = state.players?.find(p => p.id === myPlayerId);
+  const prevHandCount = currentHand?.length || 0;
+
+  // Your turn sound/haptic.
+  const prevCurrent = previous.players?.[previous.currentPlayerIndex];
+  const current = state.players?.[state.currentPlayerIndex];
+  if(current?.id === myPlayerId && prevCurrent?.id !== myPlayerId && state.phase === "playing"){
+    playSound("turn");
+    vibrate([50, 80, 50]);
+  }
+
+  // Round start.
+  if(state.phase === "playing" && (previous.phase !== "playing" || previous.round !== state.round)){
+    playSound("shuffle");
+    setTimeout(() => playSound("deal"), 250);
+    setTimeout(() => playSound("deal"), 360);
+    setTimeout(() => playSound("deal"), 470);
+    vibrate(40);
+  }
+
+  // Round over / Beaners.
+  if((state.phase === "roundOver" || state.phase === "gameOver") && previous.phase === "playing"){
+    playSound("beaners");
+    vibrate([120, 80, 180]);
+  }
+
+  // Scorecard.
+  if((state.phase === "roundOver" || state.phase === "gameOver") && previous.phase !== state.phase){
+    setTimeout(() => playSound("scorecard"), 550);
+  }
+
+  lastStateForFx = JSON.parse(JSON.stringify(state));
+}
+
 function renderState(){
   const state = latestState;
   if(!state) return;
@@ -251,7 +382,21 @@ function renderState(){
 function ensureTimerRenderer(){
   if(timerRenderInterval) return;
   timerRenderInterval = setInterval(() => {
-    if(latestState?.phase === "playing") renderSeats();
+    if(latestState?.phase === "playing") {
+      renderSeats();
+      const current = latestState.players?.[latestState.currentPlayerIndex];
+      if(current?.id === myPlayerId && latestState.turnStartedAt){
+        const elapsed = Date.now() - latestState.turnStartedAt;
+        const stage = elapsed >= 25000 ? 2 : elapsed >= 15000 ? 1 : 0;
+        if(stage !== lastWarningStage){
+          if(stage === 1){ playSound("warning"); vibrate([30,60,30]); }
+          if(stage === 2){ playSound("urgent"); vibrate([60,60,60]); }
+          lastWarningStage = stage;
+        }
+      } else {
+        lastWarningStage = 0;
+      }
+    }
   }, 1000);
 }
 
@@ -515,6 +660,7 @@ function setupTouchDrag(el, cardId){
     if(touch){
       const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest(".meld,.discardDrop");
       if(target?.classList.contains("discardDrop")){
+        playSound("discard"); vibrate(25);
         socket.emit("discardCard", { roomCode: currentRoomCode, cardId });
       } else if(target?.classList.contains("meld")){
         playOnMeld(target.dataset.meldId, cardId);
@@ -537,7 +683,8 @@ function setupDiscardDrop(){
     e.preventDefault();
     dz.classList.remove("dragOver");
     const cardId = e.dataTransfer.getData("text/plain");
-    socket.emit("discardCard", { roomCode: currentRoomCode, cardId });
+    playSound("discard"); vibrate(25);
+        socket.emit("discardCard", { roomCode: currentRoomCode, cardId });
   };
 }
 
@@ -550,6 +697,7 @@ function showDealAnimation(){
 
 function playOnMeld(meldId, cardId){
   const swapBeaner = confirm("Swap for Beaner if possible?\n\nOK = swap if legal\nCancel = just add if legal");
+  playSound("meld"); vibrate(25);
   socket.emit("playOnMeld", { roomCode: currentRoomCode, meldId, cardId, swapBeaner });
 }
 

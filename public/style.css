@@ -1558,3 +1558,67 @@ body{
   .seatTop .meld .card,.seatBottom .meld .card{min-width:20px;width:20px;height:29px}
   .hand .card{min-width:32px;height:46px}
 }
+
+
+/* v20 audio/haptics controls */
+.rightTopGroup{
+  justify-self:end;
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+
+.soundBtn{
+  width:30px;
+  height:30px;
+  min-width:30px;
+  padding:0;
+  margin:0;
+  border-radius:999px;
+  background:rgba(0,0,0,.28);
+  border:1px solid rgba(255,255,255,.18);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:15px;
+}
+
+.soundSetup{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:8px 0;
+}
+
+.inlineSound{
+  background:#fef3c7;
+  border:1px solid rgba(75,46,25,.16);
+  border-radius:12px;
+  padding:8px;
+  text-align:center;
+  margin:0;
+}
+
+.inlineSound input{
+  width:auto;
+  margin:0 6px 0 0;
+}
+
+@media(max-width:850px){
+  .soundBtn{
+    width:26px;
+    height:26px;
+    min-width:26px;
+    font-size:13px;
+  }
+  .rightTopGroup{
+    gap:3px;
+  }
+  .soundSetup{
+    gap:6px;
+  }
+  .inlineSound{
+    padding:6px;
+    font-size:13px;
+  }
+}

@@ -1,14 +1,12 @@
-# Beaners v19
+# Beaners v20
 
-Includes:
-- sideways hand scrolling for big discard pile pickups
-- hand cards sit on top when selected
-- defensive blank-card rendering fix
-- smart run insertion at the start or end of existing runs
-- larger top/bottom player areas
-- compact meld boxes that shrink/grow with card count
-- Exit Game moved to a small X top-left
-- turn border changes: green, orange after 15s, red after 25s
-- round scorecard includes average turn time
-- server-side turn timing
-- pickup-state messaging and robustness improvements
+Adds:
+- generated placeholder audio files in /public/audio
+- sound toggle button
+- sound/haptics options on start screen
+- haptics for pickup, discard, meld, turn, warnings, Beaners
+- sounds for pickup, discard, meld, shuffle/deal, turn, warnings, Beaners, scorecard
+- mobile audio unlock helper
+
+Note:
+The generated sounds are simple placeholders. Replace the WAV files in public/audio with better assets later using the same filenames.
