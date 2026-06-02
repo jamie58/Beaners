@@ -459,10 +459,49 @@ io.on("connection", socket => {
     emitRoom(roomCode); maybeRunBotTurn(roomCode);
   });
 
+
+  socket.on("rejoinRoom", ({ roomCode, playerId }) => {
+    roomCode = String(roomCode || "").trim();
+    const room = rooms[roomCode];
+    if (!room || !playerId) {
+      socket.emit("rejoinFailed");
+      return;
+    }
+
+    const player = room.players.find(p => p.id === playerId && !p.isBot);
+    if (!player) {
+      socket.emit("rejoinFailed");
+      return;
+    }
+
+    const oldId = player.id;
+    player.id = socket.id;
+
+    socket.join(roomCode);
+    socket.emit("joinedRoom", { roomCode, playerId: socket.id });
+
+    // Update meld ownership from the old socket id to the new one.
+    for (const meld of room.tableMelds) {
+      if (meld.ownerId === oldId) meld.ownerId = socket.id;
+    }
+
+    emitRoom(roomCode);
+  });
+
   socket.on("disconnect", () => {
     for(const [roomCode,room] of Object.entries(rooms)){
       const idx=room.players.findIndex(p=>p.id===socket.id);
-      if(idx>=0){ room.players.splice(idx,1); if(!room.players.length) delete rooms[roomCode]; else { if(room.currentPlayerIndex>=room.players.length) room.currentPlayerIndex=0; emitRoom(roomCode); maybeRunBotTurn(roomCode); } break; }
+      if(idx>=0){
+        if(room.phase === "lobby"){
+          room.players.splice(idx,1);
+          if(!room.players.length) delete rooms[roomCode];
+          else emitRoom(roomCode);
+        } else {
+          room.players[idx].disconnected = true;
+          emitRoom(roomCode);
+        }
+        break;
+      }
     }
   });
 });
