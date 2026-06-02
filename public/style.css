@@ -1,1 +1,62 @@
-:root{--bg:#f4f1ea;--panel:#fff;--text:#1c1c1c;--muted:#666;--dark:#2b2118;--accent:#8b5a2b;--danger:#b00020;--good:#137333}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}main{max-width:900px;margin:0 auto;padding:16px}h1{text-align:center;margin:8px 0 18px;font-size:42px}.panel{background:var(--panel);padding:16px;border-radius:16px;box-shadow:0 2px 16px #0001}.hidden{display:none!important}label{display:block;font-weight:bold;margin-top:10px}input,button{width:100%;padding:14px;margin:7px 0;font-size:17px;border-radius:12px}input{border:1px solid #ccc}button{cursor:pointer;border:0;background:var(--dark);color:white;font-weight:bold}button:disabled{opacity:.45}.divider{text-align:center;margin:16px;color:var(--muted)}.topbar{display:flex;justify-content:space-between;gap:12px;align-items:start}.roundBadge{background:#f7e5c7;padding:12px;border-radius:12px;text-align:right;min-width:120px}.winner{background:#ffe6e6;color:var(--danger);text-align:center;font-weight:900;font-size:34px;padding:18px;border-radius:16px;margin:12px 0}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.board{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{display:inline-flex;justify-content:center;align-items:center;min-width:54px;height:78px;margin:5px;padding:8px;border-radius:10px;border:2px solid var(--dark);background:white;font-size:21px;font-weight:bold;vertical-align:middle}.card.large{width:78px;height:108px;font-size:28px}.card.back{background:var(--dark);color:white}.card.red{color:var(--danger)}.card.selected{outline:5px solid #f6c443;transform:translateY(-5px)}.card.beaner{border-color:var(--danger);box-shadow:0 0 0 3px #b0002026}.hand{display:flex;flex-wrap:wrap;gap:2px;min-height:90px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hint{color:var(--muted);font-size:14px}.playerRow,.meld{border:1px solid #ddd;border-radius:12px;padding:10px;margin:8px 0;background:#fafafa}.playerRow.current{border-color:var(--good);box-shadow:0 0 0 2px #13733326}.meldHeader{display:flex;justify-content:space-between;gap:8px;align-items:center}.meld button{width:auto;padding:10px 14px}#wheelResult{text-align:center;font-weight:bold;font-size:20px;min-height:28px;margin:8px}@media(max-width:600px){.topbar{flex-direction:column}.grid3,.board,.actions{grid-template-columns:1fr}h1{font-size:34px}}
+:root{
+  --felt:#166534;
+  --felt-dark:#0f3f24;
+  --panel:#fffaf0;
+  --card:#fff;
+  --ink:#1c1917;
+  --muted:#78716c;
+  --gold:#fbbf24;
+  --red:#b91c1c;
+  --brown:#4b2e19;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:radial-gradient(circle at top,var(--felt),var(--felt-dark));color:var(--ink);min-height:100vh}
+main{max-width:1180px;margin:0 auto;padding:14px}
+.title{text-align:center;color:white;text-shadow:0 2px 6px #000}
+.title h1{font-size:48px;margin:8px 0 0}
+.title p{margin:0 0 12px;color:#dcfce7}
+.panel{background:var(--panel);border-radius:18px;padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.18);margin-bottom:12px}
+.hidden{display:none!important}
+label{font-weight:bold;display:block;margin:8px 0 4px}
+input,button{width:100%;padding:13px;margin:6px 0;font-size:17px;border-radius:12px}
+input{border:1px solid #d6d3d1}
+button{border:0;background:var(--brown);color:white;font-weight:bold;cursor:pointer}
+button.secondary{background:#854d0e}
+.divider{text-align:center;color:var(--muted);margin:12px}
+.topPanel{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.topPanel h2{margin:0}
+.roundBadge{background:#fde68a;padding:12px;border-radius:14px;text-align:right;min-width:150px}
+.roundBadge span,.roundBadge strong{display:block}
+.winner{background:#fee2e2;color:var(--red);font-size:34px;font-weight:900;text-align:center;padding:18px;border-radius:18px;margin-bottom:12px}
+.gameGrid{display:grid;grid-template-columns:250px 1fr;gap:12px}
+.sidePanel{align-self:start}
+.pileArea{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;text-align:center}
+.tablePanel{min-height:360px}
+.meldTable{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.meld{background:#fef3c7;border:3px dashed rgba(75,46,25,.25);border-radius:16px;padding:12px;min-height:130px;transition:.12s}
+.meld.dragOver{border-color:var(--gold);transform:scale(1.015);background:#fffbeb}
+.meldHeader{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
+.meldTitle{font-weight:bold}
+.meldMeta{font-size:13px;color:var(--muted)}
+.card{display:inline-flex;align-items:center;justify-content:center;min-width:56px;height:78px;margin:4px;padding:8px;border:2px solid #1c1917;border-radius:11px;background:var(--card);font-weight:900;font-size:21px;box-shadow:0 2px 7px rgba(0,0,0,.18);user-select:none;touch-action:none}
+.card.large{width:78px;height:108px;font-size:28px}
+.card.back{background:#1c1917;color:white}
+.card.red{color:var(--red)}
+.card.beaner{border-color:var(--red);box-shadow:0 0 0 4px rgba(185,28,28,.15),0 2px 7px rgba(0,0,0,.18)}
+.card.selected{outline:5px solid var(--gold);transform:translateY(-6px)}
+.hand{display:flex;flex-wrap:wrap;gap:3px;min-height:92px}
+.hand .card{cursor:grab}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hint{font-size:14px;color:var(--muted);margin-top:0}
+.scoreGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.playerRow{background:white;border-radius:14px;border:2px solid #e7e5e4;padding:10px}
+.playerRow.current{border-color:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+.botTag{font-size:12px;background:#e7e5e4;border-radius:20px;padding:2px 7px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px}
+.modalBox{background:white;border-radius:18px;padding:18px;max-width:420px;width:100%}
+@media(max-width:800px){
+  .gameGrid{grid-template-columns:1fr}
+  .meldTable{grid-template-columns:1fr}
+  .scoreGrid{grid-template-columns:1fr 1fr}
+  .topPanel{flex-direction:column;align-items:stretch}
+}

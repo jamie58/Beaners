@@ -1,6 +1,109 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Beaners</title><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><main><h1>Beaners</h1>
-<section id="lobby" class="panel"><label>Your name</label><input id="nameInput" placeholder="Jamie" maxlength="20"><button id="createBtn">Create Room</button><div class="divider">or</div><label>Room code</label><input id="roomInput" placeholder="1234" maxlength="4"><button id="joinBtn">Join Room</button></section>
-<section id="game" class="panel hidden"><div class="topbar"><div><h2>Room <span id="roomCode"></span></h2><p id="status"></p></div><div class="roundBadge"><div>Round <span id="roundNo">1</span>/13</div><strong>Beaner: <span id="beanerRank">A</span></strong></div></div><div id="winnerMessage" class="winner hidden"></div>
-<section id="lobbyControls"><button id="spinBtn">Spin Starter Wheel</button><div id="wheelResult"></div><button id="startBtn">Start Game</button></section>
-<section id="playingControls" class="hidden"><h3>Pick up</h3><div class="grid3"><button id="drawDeckBtn">Deck</button><button id="takeTopDiscardBtn">Top Discard</button><button id="takeAllDiscardBtn">Entire Discard</button></div><div class="board"><div><h3>Deck</h3><div class="card back">?</div><p><span id="deckCount">0</span> left</p></div><div><h3>Discard</h3><div id="discardCard" class="card large">-</div><p><span id="discardCount">0</span> cards</p></div></div><h3>Your Hand</h3><p class="hint">Tap cards to select. Select 3+ and press Lay Meld, or select 1 and discard/add to a meld.</p><div id="hand" class="hand"></div><div class="actions"><button id="layMeldBtn">Lay Selected Meld</button><button id="discardBtn">Discard Selected Card</button></div><h3>Table Melds</h3><p class="hint">True real-time chaos: once you're down, select a card from your hand, then tap Add on any meld.</p><div id="melds"></div></section>
-<section><h3>Players / Scores</h3><div id="players"></div></section><section id="roundOverControls" class="hidden"><button id="nextRoundBtn">Start Next Round</button></section></section></main><script src="/socket.io/socket.io.js"></script><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Beaners</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <header class="title">
+      <h1>Beaners</h1>
+      <p>Real-time chaos mode</p>
+    </header>
+
+    <section id="lobby" class="panel lobby">
+      <label>Your name</label>
+      <input id="nameInput" placeholder="Jamie" maxlength="20">
+      <button id="createBtn">Create Room</button>
+      <div class="divider">or</div>
+      <label>Room code</label>
+      <input id="roomInput" placeholder="1234" maxlength="4">
+      <button id="joinBtn">Join Room</button>
+    </section>
+
+    <section id="game" class="hidden">
+      <section class="panel topPanel">
+        <div>
+          <h2>Room <span id="roomCode"></span></h2>
+          <p id="status"></p>
+        </div>
+        <div class="roundBadge">
+          <span>Round <b id="roundNo">1</b>/13</span>
+          <strong>Beaner: <span id="beanerRank">A</span></strong>
+        </div>
+      </section>
+
+      <div id="winnerMessage" class="winner hidden"></div>
+
+      <section id="lobbyControls" class="panel">
+        <button id="addBotBtn" class="secondary">Add 1 Computer Player</button>
+        <button id="fillBotsBtn" class="secondary">Fill Empty Seats With Bots</button>
+        <button id="spinBtn">Spin Starter Wheel</button>
+        <div id="wheelResult"></div>
+        <button id="startBtn">Start Game</button>
+      </section>
+
+      <section id="playingControls" class="gameGrid hidden">
+        <aside class="panel sidePanel">
+          <h3>Pick up</h3>
+          <button id="drawDeckBtn">Deck</button>
+          <button id="takeTopDiscardBtn">Top Discard</button>
+          <button id="takeAllDiscardBtn">Entire Discard</button>
+
+          <div class="pileArea">
+            <div>
+              <h4>Deck</h4>
+              <div class="card back">?</div>
+              <small><span id="deckCount">0</span> left</small>
+            </div>
+            <div>
+              <h4>Discard</h4>
+              <div id="discardCard" class="card large">-</div>
+              <small><span id="discardCount">0</span> cards</small>
+            </div>
+          </div>
+        </aside>
+
+        <section class="panel tablePanel">
+          <h3>Table Melds</h3>
+          <p class="hint">Drag a card onto a meld, or double-click a card to auto-play. Beaner swaps are handled by the server.</p>
+          <div id="melds" class="meldTable"></div>
+        </section>
+      </section>
+
+      <section class="panel handPanel">
+        <h3>Your Hand</h3>
+        <p class="hint">Tap cards to select. Select 3+ to lay a meld. Select 1 to discard. Drag cards into the middle melds.</p>
+        <div id="hand" class="hand"></div>
+        <div class="actions">
+          <button id="layMeldBtn">Lay Selected Meld</button>
+          <button id="discardBtn">Discard Selected Card</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>Players / Scores</h3>
+        <div id="players" class="scoreGrid"></div>
+      </section>
+
+      <section id="roundOverControls" class="panel hidden">
+        <button id="nextRoundBtn">Start Next Round</button>
+      </section>
+    </section>
+  </main>
+
+  <div id="meldChoice" class="modal hidden">
+    <div class="modalBox">
+      <h3>Choose a meld</h3>
+      <p>This card fits more than one meld.</p>
+      <div id="meldChoiceButtons"></div>
+      <button id="cancelChoice">Cancel</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

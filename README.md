@@ -1,3 +1,12 @@
-# Beaners
+# Beaners v4
 
-Node.js + Socket.IO web card game. Deploy on Render with Build Command `npm install` and Start Command `npm start`.
+Adds:
+- central table meld layout
+- drag/drop cards onto melds
+- double-click auto-play
+- Beaner swap logic for sets and runs
+- simple bot testing
+
+Render settings:
+Build Command: npm install
+Start Command: npm start
