@@ -45,37 +45,42 @@
         <button id="startBtn">Start Game</button>
       </section>
 
-      <section id="playingControls" class="gameGrid hidden">
-        <aside class="panel sidePanel">
-          <h3>Pick up</h3>
-          <button id="drawDeckBtn">Deck</button>
-          <button id="takeTopDiscardBtn">Top Discard</button>
-          <button id="takeAllDiscardBtn">Entire Discard</button>
+      <section id="playingControls" class="hidden">
+        <section class="tableShell">
+          <div class="tableFelt">
+            <div id="seatTop" class="seat seatTop"></div>
+            <div id="seatLeft" class="seat seatLeft"></div>
+            <div id="seatRight" class="seat seatRight"></div>
+            <div id="seatBottom" class="seat seatBottom"></div>
 
-          <div class="pileArea">
-            <div>
-              <h4>Deck</h4>
-              <div class="card back">?</div>
-              <small><span id="deckCount">0</span> left</small>
+            <div class="centerPiles">
+              <div class="pile">
+                <h4>Deck</h4>
+                <button id="drawDeckBtn" class="card back drawCardButton">?</button>
+                <small><span id="deckCount">0</span> left</small>
+              </div>
+
+              <div id="discardDropZone" class="pile discardDrop">
+                <h4>Discard</h4>
+                <button id="takeTopDiscardBtn" class="card large discardButton">-</button>
+                <small><span id="discardCount">0</span> cards</small>
+                <button id="takeAllDiscardBtn" class="miniBtn">Take pile</button>
+              </div>
             </div>
-            <div>
-              <h4>Discard</h4>
-              <div id="discardCard" class="card large">-</div>
-              <small><span id="discardCount">0</span> cards</small>
+
+            <div id="dealAnimation" class="dealAnimation hidden">
+              <div class="flyingCard c1"></div>
+              <div class="flyingCard c2"></div>
+              <div class="flyingCard c3"></div>
+              <div class="flyingCard c4"></div>
             </div>
           </div>
-        </aside>
-
-        <section class="panel tablePanel">
-          <h3>Table Melds</h3>
-          <p class="hint">Drag a card onto a meld, or double-click a card to auto-play. Beaner swaps are handled by the server.</p>
-          <div id="melds" class="meldTable"></div>
         </section>
       </section>
 
       <section class="panel handPanel">
         <h3>Your Hand</h3>
-        <p class="hint">Tap cards to select. Select 3+ to lay a meld. Select 1 to discard. Drag cards into the middle melds.</p>
+        <p class="hint">Tap to select. Drag to a meld or discard pile. Double-click to auto-play.</p>
         <div id="hand" class="hand"></div>
         <div class="actions">
           <button id="layMeldBtn">Lay Selected Meld</button>

@@ -6,6 +6,8 @@ let currentHand = [];
 let selectedCardIds = new Set();
 let latestState = null;
 let pendingChoiceCardId = null;
+let previousPhase = null;
+let previousRound = null;
 
 const $ = id => document.getElementById(id);
 
@@ -45,6 +47,7 @@ socket.on("joinedRoom", ({roomCode, playerId}) => {
   $("roomCode").textContent = roomCode;
   $("lobby").classList.add("hidden");
   $("game").classList.remove("hidden");
+  setupDiscardDrop();
 });
 
 socket.on("starterSpun", ({starterName}) => {
@@ -59,8 +62,12 @@ socket.on("starterSpun", ({starterName}) => {
 });
 
 socket.on("roomState", state => {
+  const shouldAnimate = state.phase === "playing" && (previousPhase !== "playing" || previousRound !== state.round);
   latestState = state;
   renderState();
+  if (shouldAnimate) showDealAnimation();
+  previousPhase = state.phase;
+  previousRound = state.round;
 });
 
 socket.on("yourHand", hand => {
@@ -112,8 +119,8 @@ function renderState(){
   else $("status").textContent = "Game over.";
 
   const top = state.topDiscard;
-  $("discardCard").textContent = top ? cardText(top) : "-";
-  $("discardCard").className = "card large " + cardClasses(top);
+  $("takeTopDiscardBtn").textContent = top ? cardText(top) : "-";
+  $("takeTopDiscardBtn").className = "card large discardButton " + cardClasses(top);
 
   renderPlayers();
   renderMelds();
@@ -162,59 +169,117 @@ function renderHand(){
   });
 }
 
+
 function renderMelds(){
-  const wrap = $("melds");
+  renderSeats();
+}
+
+function renderSeats(){
   const state = latestState;
-  wrap.innerHTML = "";
-  if(!state.tableMelds.length){
-    wrap.innerHTML = `<p class="hint">No melds on the table yet.</p>`;
-    return;
-  }
+  const seats = ["seatTop", "seatLeft", "seatRight", "seatBottom"];
+  seats.forEach(id => { if($(id)) $(id).innerHTML = ""; });
+  if(!state || !state.players) return;
 
-  state.tableMelds.forEach(meld => {
-    const box = document.createElement("div");
-    box.className = "meld";
-    box.dataset.meldId = meld.id;
+  const meIndex = Math.max(0, state.players.findIndex(p => p.id === myPlayerId));
+  const ordered = [
+    state.players[meIndex],
+    state.players[(meIndex + 1) % state.players.length],
+    state.players[(meIndex + 2) % state.players.length],
+    state.players[(meIndex + 3) % state.players.length],
+  ].filter(Boolean);
 
-    const beaners = (meld.beanerPositions || []).map(b => `${b.represents.rank}${b.represents.suit || ""}`).join(", ");
+  const placement = [
+    { player: ordered[2], seat: "seatTop" },
+    { player: ordered[1], seat: "seatLeft" },
+    { player: ordered[3], seat: "seatRight" },
+    { player: ordered[0], seat: "seatBottom" },
+  ];
 
+  placement.forEach(({player, seat}) => {
+    if(!player || !$(seat)) return;
+    const box = $(seat);
+    box.className = box.className.replace(/\s?current|\s?you/g, "");
+    if(player.index === state.currentPlayerIndex && state.phase === "playing") box.classList.add("current");
+    if(player.id === myPlayerId) box.classList.add("you");
+
+    const melds = state.tableMelds.filter(m => m.ownerId === player.id);
     box.innerHTML = `
-      <div class="meldHeader">
+      <div class="seatHeader">
         <div>
-          <div class="meldTitle">${escapeHtml(meld.ownerName)}</div>
-          <div class="meldMeta">${meld.type.toUpperCase()}${beaners ? ` | Beaner = ${beaners}` : ""}</div>
+          <div class="seatName">${player.index === state.currentPlayerIndex && state.phase === "playing" ? "👉 " : ""}${escapeHtml(player.name)}${player.id === myPlayerId ? " (you)" : ""} ${player.isBot ? '<span class="botTag">BOT</span>' : ""}</div>
+          <div class="seatMeta">${player.cardCount} cards | ${player.isDown ? "Down" : "Not down"} | ${player.totalScore} pts</div>
         </div>
-        <button type="button">Add selected</button>
       </div>
-      <div class="meldCards"></div>
+      <div class="seatMelds"></div>
     `;
 
-    box.querySelector("button").onclick = () => {
-      const ids = [...selectedCardIds];
-      if(ids.length !== 1) return alert("Select exactly 1 card.");
+    const meldWrap = box.querySelector(".seatMelds");
+    if(!melds.length){
+      meldWrap.innerHTML = `<p class="hint">No melds yet</p>`;
+      return;
+    }
+    melds.forEach(meld => meldWrap.appendChild(createMeldElement(meld)));
+  });
+}
+
+function createMeldElement(meld){
+  const box = document.createElement("div");
+  box.className = "meld";
+  box.dataset.meldId = meld.id;
+  const beaners = (meld.beanerPositions || []).map(b => `${b.represents.rank}${b.represents.suit || ""}`).join(", ");
+
+  box.innerHTML = `
+    <div class="meldMeta">${meld.type.toUpperCase()}${beaners ? ` | Beaner = ${beaners}` : ""}</div>
+    <div class="meldCards"></div>
+  `;
+
+  box.ondragover = e => { e.preventDefault(); box.classList.add("dragOver"); };
+  box.ondragleave = () => box.classList.remove("dragOver");
+  box.ondrop = e => {
+    e.preventDefault();
+    box.classList.remove("dragOver");
+    const cardId = e.dataTransfer.getData("text/plain");
+    playOnMeld(meld.id, cardId);
+  };
+
+  box.onclick = () => {
+    const ids = [...selectedCardIds];
+    if(ids.length === 1){
       playOnMeld(meld.id, ids[0]);
       selectedCardIds.clear();
-    };
+      renderHand();
+    }
+  };
 
-    box.ondragover = e => { e.preventDefault(); box.classList.add("dragOver"); };
-    box.ondragleave = () => box.classList.remove("dragOver");
-    box.ondrop = e => {
-      e.preventDefault();
-      box.classList.remove("dragOver");
-      const cardId = e.dataTransfer.getData("text/plain");
-      playOnMeld(meld.id, cardId);
-    };
-
-    const cardWrap = box.querySelector(".meldCards");
-    meld.cards.forEach(card => {
-      const c = document.createElement("span");
-      c.className = "card " + cardClasses(card);
-      c.textContent = cardText(card);
-      cardWrap.appendChild(c);
-    });
-
-    wrap.appendChild(box);
+  const cardWrap = box.querySelector(".meldCards");
+  meld.cards.forEach(card => {
+    const c = document.createElement("span");
+    c.className = "card " + cardClasses(card);
+    c.textContent = cardText(card);
+    cardWrap.appendChild(c);
   });
+
+  return box;
+}
+
+function setupDiscardDrop(){
+  const dz = $("discardDropZone");
+  if(!dz) return;
+  dz.ondragover = e => { e.preventDefault(); dz.classList.add("dragOver"); };
+  dz.ondragleave = () => dz.classList.remove("dragOver");
+  dz.ondrop = e => {
+    e.preventDefault();
+    dz.classList.remove("dragOver");
+    const cardId = e.dataTransfer.getData("text/plain");
+    socket.emit("discardCard", { roomCode: currentRoomCode, cardId });
+  };
+}
+
+function showDealAnimation(){
+  const el = $("dealAnimation");
+  if(!el) return;
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 900);
 }
 
 function playOnMeld(meldId, cardId){

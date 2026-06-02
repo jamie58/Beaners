@@ -1,12 +1,14 @@
-# Beaners v4
+# Beaners v5
 
 Adds:
-- central table meld layout
-- drag/drop cards onto melds
+- table-style layout with each player's melds in front of their seat
+- responsive layout for iPhone and Android
+- shuffle/deal animation when a round starts
+- drag cards onto melds
+- drag cards into the discard pile
 - double-click auto-play
-- Beaner swap logic for sets and runs
-- simple bot testing
+- Beaner swap logic from v4
 
-Render settings:
+Render:
 Build Command: npm install
 Start Command: npm start
