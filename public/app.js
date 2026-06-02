@@ -8,6 +8,8 @@ let latestState = null;
 let pendingChoiceCardId = null;
 let previousPhase = null;
 let previousRound = null;
+let lastShownScoreRound = null;
+let scorecardTimer = null;
 
 const $ = id => document.getElementById(id);
 
@@ -41,6 +43,8 @@ $("cancelChoice").onclick = () => {
   $("meldChoice").classList.add("hidden");
 };
 
+$("closeScorecard").onclick = () => hideScorecard();
+
 socket.on("joinedRoom", ({roomCode, playerId}) => {
   currentRoomCode = roomCode;
   myPlayerId = playerId;
@@ -66,6 +70,12 @@ socket.on("roomState", state => {
   latestState = state;
   renderState();
   if (shouldAnimate) showDealAnimation();
+
+  if ((state.phase === "roundOver" || state.phase === "gameOver") && lastShownScoreRound !== state.round) {
+    showScorecard(state);
+    lastShownScoreRound = state.round;
+  }
+
   previousPhase = state.phase;
   previousRound = state.round;
 });
@@ -295,6 +305,57 @@ function cardClasses(card){
   if(["♥","♦"].includes(card.suit)) classes.push("red");
   if(card.rank === latestState.beaner) classes.push("beaner");
   return classes.join(" ");
+}
+
+
+function showScorecard(state){
+  const modal = $("scorecardModal");
+  const content = $("scorecardContent");
+  if(!modal || !content) return;
+
+  const latestRound = state.roundScores?.[state.roundScores.length - 1];
+  const roundScores = latestRound?.scores || {};
+
+  let html = `<h3>Round ${state.round} - Beaner: ${state.beaner}</h3>`;
+  html += `<table class="scoreTable">
+    <thead>
+      <tr>
+        <th>Player</th>
+        <th>Round Score</th>
+        <th>Running Total</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  state.players.forEach(player => {
+    const roundScore = roundScores[player.id] ?? player.lastRoundScore ?? 0;
+    html += `<tr>
+      <td>${escapeHtml(player.name)}${player.id === myPlayerId ? " (you)" : ""}</td>
+      <td>${roundScore}</td>
+      <td>${player.totalScore}</td>
+    </tr>`;
+  });
+
+  html += `</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3">Lowest score after 13 rounds wins</td>
+      </tr>
+    </tfoot>
+  </table>`;
+
+  content.innerHTML = html;
+  modal.classList.remove("hidden");
+
+  if(scorecardTimer) clearTimeout(scorecardTimer);
+  scorecardTimer = setTimeout(() => hideScorecard(), 10000);
+}
+
+function hideScorecard(){
+  const modal = $("scorecardModal");
+  if(modal) modal.classList.add("hidden");
+  if(scorecardTimer) clearTimeout(scorecardTimer);
+  scorecardTimer = null;
 }
 
 function escapeHtml(str){

@@ -59,36 +59,64 @@ function validateSet(cards, round){
   };
 }
 
+
 function validateRun(cards, round){
   if(cards.length < 3) return null;
+
   const nonBeaners = cards.filter(c => !isBeaner(c, round));
   const suit = nonBeaners[0]?.suit || null;
-  if(!suit) return {type:"run", suit:"Any", display:cards.map(cardLabel).join(" "), ranks:null, beanerPositions:[]};
-  for(const card of nonBeaners) if(card.suit !== suit) return null;
 
-  const seqs = runSequencesForLength(cards.length);
-  for(const seq of seqs){
-    const used = new Set();
+  // All Beaners can form a generic run, but their exact represented cards are ambiguous.
+  if(!suit){
+    return {
+      type:"run",
+      suit:"Any",
+      display:cards.map(cardLabel).join(" "),
+      beanerPositions:cards.map((c,i)=>({index:i, represents:{rank:"Any", suit:"Any"}}))
+    };
+  }
+
+  // Every non-Beaner in the run must be the same suit.
+  for(const card of nonBeaners){
+    if(card.suit !== suit) return null;
+  }
+
+  // Runs must be laid in actual left-to-right order.
+  // Example valid: 8♠ Beaner 10♠ where Beaner = 9♠.
+  // Example invalid: 8♠ 10♠ Beaner A♦ Beaner 6♠.
+  for(const sequence of runSequencesForLength(cards.length)){
     let ok = true;
-    for(const card of nonBeaners){
-      let matched = false;
-      for(let i=0;i<seq.length;i++){
-        if(!used.has(i) && seq[i] === card.rank){
-          used.add(i); matched = true; break;
-        }
+    const beanerPositions = [];
+
+    for(let i = 0; i < cards.length; i++){
+      const card = cards[i];
+      const expectedRank = sequence[i];
+
+      if(isBeaner(card, round)){
+        beanerPositions.push({
+          index:i,
+          represents:{rank:expectedRank, suit}
+        });
+        continue;
       }
-      if(!matched){ ok = false; break; }
+
+      if(card.suit !== suit || card.rank !== expectedRank){
+        ok = false;
+        break;
+      }
     }
+
     if(ok){
       return {
         type:"run",
         suit,
-        ranks: seq,
-        display: seq.map(r => `${r}${suit}`).join(" "),
-        beanerPositions: cards.map((c,i)=>isBeaner(c,round) ? {index:i, represents:{rank:seq[i], suit}} : null).filter(Boolean)
+        ranks:sequence,
+        display:sequence.map(r => `${r}${suit}`).join(" "),
+        beanerPositions
       };
     }
   }
+
   return null;
 }
 
@@ -163,6 +191,7 @@ function publicRoomState(roomCode){
     discardCount: room.discardPile.length,
     topDiscard: room.discardPile[room.discardPile.length - 1] || null,
     winnerMessage: room.winnerMessage || "",
+    roundScores: room.roundScores || [],
     players: room.players.map((p,i)=>({
       id:p.id, name:p.name, cardCount:p.hand.length, totalScore:p.totalScore,
       lastRoundScore:p.lastRoundScore, isDown:p.isDown, isBot:!!p.isBot, index:i
@@ -193,10 +222,13 @@ function resetRound(room){
 function endRound(roomCode, winnerId){
   const room = rooms[roomCode]; if(!room) return;
   const winner = room.players.find(p=>p.id===winnerId);
+  const scoreRow = { round: room.round, beaner: beanerForRound(room.round), scores: {} };
   for(const p of room.players){
     const points = p.id === winnerId ? 0 : scoreHand(p.hand, room.round);
-    p.totalScore += points; p.lastRoundScore = points;
+    p.totalScore += points; p.lastRoundScore = points; scoreRow.scores[p.id] = points;
   }
+  room.roundScores = room.roundScores || [];
+  room.roundScores.push(scoreRow);
   room.phase = room.round >= 13 ? "gameOver" : "roundOver";
   if(room.phase === "gameOver"){
     const winnerGame = [...room.players].sort((a,b)=>a.totalScore-b.totalScore)[0];
@@ -303,7 +335,7 @@ function addBot(room){
 io.on("connection", socket => {
   socket.on("createRoom", ({name}) => {
     const roomCode=createRoomCode();
-    rooms[roomCode]={players:[{id:socket.id,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:""};
+    rooms[roomCode]={players:[{id:socket.id,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:"",roundScores:[]};
     socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id}); emitRoom(roomCode);
   });
 
@@ -331,7 +363,7 @@ io.on("connection", socket => {
   socket.on("startGame", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="lobby") return;
     if(room.players.length!==4) return socket.emit("errorMessage","Need exactly 4 players.");
-    room.round=1; for(const p of room.players){p.totalScore=0; p.lastRoundScore=null;}
+    room.round=1; room.roundScores=[]; for(const p of room.players){p.totalScore=0; p.lastRoundScore=null;}
     resetRound(room); emitRoom(roomCode); maybeRunBotTurn(roomCode);
   });
 

@@ -18,3 +18,423 @@ label{font-weight:bold;display:block;margin:8px 0 4px}input,button{width:100%;pa
 .dealAnimation{position:absolute;inset:0;pointer-events:none;z-index:10}.flyingCard{position:absolute;width:42px;height:58px;border-radius:8px;background:#1c1917;border:2px solid white;left:50%;top:50%;transform:translate(-50%,-50%);animation:flyDeal .8s ease-in-out 1}.c1{--x:0;--y:-245px}.c2{--x:-390px;--y:0}.c3{--x:390px;--y:0}.c4{--x:0;--y:245px}@keyframes flyDeal{0%{transform:translate(-50%,-50%) scale(.6) rotate(0)}60%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1) rotate(360deg)}100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(.8) rotate(420deg)}}
 @media(max-width:850px){main{padding:8px}.title h1{font-size:34px}.topPanel{flex-direction:column;align-items:stretch}.tableFelt{min-height:560px;border-width:6px;border-radius:26px;padding:8px}.seat{padding:8px;border-radius:14px;min-height:112px}.seatTop{left:8px;right:8px;top:8px}.seatBottom{left:8px;right:8px;bottom:8px}.seatLeft{left:8px;right:52%;top:170px;bottom:150px;width:auto}.seatRight{right:8px;left:52%;top:170px;bottom:150px;width:auto}.seatLeft .seatMelds,.seatRight .seatMelds{max-height:155px}.centerPiles{gap:8px;top:50%}.pile{width:92px;padding:7px}.card{min-width:39px;height:56px;font-size:15px;border-radius:8px;margin:2px}.card.large{width:52px;height:74px;font-size:20px}.meld{min-width:92px;padding:6px}.scoreGrid{grid-template-columns:1fr 1fr}.actions{grid-template-columns:1fr}.hand{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}.hand .card{min-width:45px;height:64px}}
 @media(max-width:430px){.tableFelt{min-height:525px}.seatLeft,.seatRight{top:155px;bottom:140px}.centerPiles{transform:translate(-50%,-44%) scale(.92)}.seatHeader{font-size:13px}.seatMeta{font-size:12px}.meldMeta{font-size:11px}}
+
+
+.scorecardModal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.62);
+  z-index:30;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+.scorecardBox{
+  background:#fffaf0;
+  color:#1c1917;
+  width:min(560px,100%);
+  max-height:85vh;
+  overflow:auto;
+  border-radius:20px;
+  padding:18px;
+  box-shadow:0 14px 50px rgba(0,0,0,.35);
+}
+.scorecardBox h2{
+  margin-top:0;
+  text-align:center;
+}
+.scoreTable{
+  width:100%;
+  border-collapse:collapse;
+  margin:10px 0;
+  background:white;
+  border-radius:12px;
+  overflow:hidden;
+}
+.scoreTable th,.scoreTable td{
+  border:1px solid #e7e5e4;
+  padding:9px;
+  text-align:center;
+}
+.scoreTable th{
+  background:#fde68a;
+}
+.scoreTable tfoot td{
+  font-weight:900;
+  background:#fef3c7;
+}
+.scorecardHint{
+  text-align:center;
+  color:#78716c;
+  font-size:13px;
+}
+
+
+/* v7 mobile full-screen optimisation */
+@media(max-width:850px){
+  html, body{
+    width:100%;
+    min-height:100%;
+    overflow-x:hidden;
+  }
+
+  body{
+    background:var(--felt-dark);
+  }
+
+  main{
+    width:100vw;
+    max-width:none;
+    min-height:100dvh;
+    padding:4px;
+  }
+
+  .title{
+    padding:0;
+    margin:0;
+  }
+
+  .title h1{
+    font-size:26px;
+    line-height:1;
+    margin:2px 0 0;
+  }
+
+  .title p{
+    display:none;
+  }
+
+  .panel{
+    border-radius:12px;
+    padding:8px;
+    margin-bottom:6px;
+  }
+
+  .topPanel{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:6px;
+    align-items:center;
+    padding:8px;
+  }
+
+  .topPanel h2{
+    font-size:18px;
+    margin:0 0 2px;
+  }
+
+  #status{
+    font-size:13px;
+    line-height:1.2;
+    margin:0;
+  }
+
+  .roundBadge{
+    min-width:92px;
+    padding:7px;
+    border-radius:10px;
+    font-size:13px;
+  }
+
+  .winner{
+    font-size:22px;
+    padding:10px;
+    margin-bottom:6px;
+  }
+
+  #playingControls{
+    height:calc(100dvh - 250px);
+    min-height:360px;
+  }
+
+  .tableShell{
+    height:100%;
+  }
+
+  .tableFelt{
+    height:100%;
+    min-height:0;
+    border-width:4px;
+    border-radius:18px;
+    padding:5px;
+  }
+
+  .seat{
+    padding:5px;
+    border-radius:10px;
+    min-height:0;
+    overflow:hidden;
+  }
+
+  .seatTop{
+    left:5px;
+    right:5px;
+    top:5px;
+    height:88px;
+  }
+
+  .seatBottom{
+    left:5px;
+    right:5px;
+    bottom:5px;
+    height:96px;
+  }
+
+  .seatLeft{
+    left:5px;
+    right:auto;
+    width:38%;
+    top:100px;
+    bottom:108px;
+  }
+
+  .seatRight{
+    right:5px;
+    left:auto;
+    width:38%;
+    top:100px;
+    bottom:108px;
+  }
+
+  .seatHeader{
+    margin-bottom:3px;
+    line-height:1.05;
+  }
+
+  .seatName{
+    font-size:13px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .seatMeta{
+    font-size:11px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .botTag{
+    font-size:10px;
+    padding:1px 5px;
+  }
+
+  .seatMelds{
+    gap:3px;
+    max-height:calc(100% - 28px);
+    overflow:auto;
+  }
+
+  .seatLeft .seatMelds,
+  .seatRight .seatMelds{
+    max-height:calc(100% - 28px);
+  }
+
+  .seatMelds .hint{
+    font-size:11px;
+    margin:2px 0;
+  }
+
+  .centerPiles{
+    top:50%;
+    gap:6px;
+    transform:translate(-50%,-50%) scale(.82);
+  }
+
+  .pile{
+    width:74px;
+    padding:5px;
+    border-radius:12px;
+  }
+
+  .pile h4{
+    font-size:12px;
+    margin:0 0 3px;
+  }
+
+  .pile small{
+    font-size:11px;
+  }
+
+  .miniBtn{
+    font-size:11px;
+    padding:5px;
+    margin-top:4px;
+    border-radius:8px;
+  }
+
+  .meld{
+    min-width:66px;
+    padding:4px;
+    border-width:2px;
+    border-radius:9px;
+  }
+
+  .meldMeta{
+    font-size:9px;
+    margin-bottom:2px;
+  }
+
+  .meldCards{
+    gap:1px;
+  }
+
+  .card{
+    min-width:28px;
+    height:40px;
+    font-size:12px;
+    padding:3px;
+    border-width:1.5px;
+    border-radius:6px;
+    margin:1px;
+  }
+
+  .card.large{
+    width:42px;
+    height:58px;
+    font-size:16px;
+  }
+
+  .handPanel{
+    position:sticky;
+    bottom:0;
+    z-index:12;
+    margin-bottom:4px;
+    padding:7px;
+  }
+
+  .handPanel h3{
+    display:none;
+  }
+
+  .handPanel .hint{
+    display:none;
+  }
+
+  .hand{
+    min-height:54px;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    gap:1px;
+    padding-bottom:2px;
+  }
+
+  .hand .card{
+    min-width:36px;
+    height:50px;
+    font-size:14px;
+    flex:0 0 auto;
+  }
+
+  .actions{
+    grid-template-columns:1fr 1fr;
+    gap:5px;
+  }
+
+  .actions button{
+    padding:8px;
+    font-size:13px;
+    margin:3px 0 0;
+    border-radius:9px;
+  }
+
+  .scoreGrid{
+    display:none;
+  }
+
+  .panel:has(.scoreGrid){
+    display:none;
+  }
+
+  .scorecardBox{
+    max-height:80dvh;
+    padding:12px;
+  }
+
+  .scoreTable th,.scoreTable td{
+    padding:6px;
+    font-size:13px;
+  }
+}
+
+@media(max-width:430px){
+  #playingControls{
+    height:calc(100dvh - 230px);
+    min-height:340px;
+  }
+
+  .title h1{
+    font-size:24px;
+  }
+
+  .topPanel h2{
+    font-size:17px;
+  }
+
+  #status{
+    font-size:12px;
+  }
+
+  .roundBadge{
+    min-width:84px;
+    font-size:12px;
+    padding:6px;
+  }
+
+  .tableFelt{
+    border-radius:16px;
+  }
+
+  .seatTop{
+    height:82px;
+  }
+
+  .seatBottom{
+    height:90px;
+  }
+
+  .seatLeft,.seatRight{
+    top:93px;
+    bottom:101px;
+    width:39%;
+  }
+
+  .centerPiles{
+    transform:translate(-50%,-50%) scale(.76);
+  }
+
+  .card{
+    min-width:26px;
+    height:38px;
+    font-size:11px;
+  }
+
+  .hand .card{
+    min-width:34px;
+    height:48px;
+    font-size:13px;
+  }
+}
+
+@media(max-width:380px){
+  .centerPiles{
+    transform:translate(-50%,-50%) scale(.68);
+  }
+
+  .seatLeft,.seatRight{
+    width:40%;
+  }
+
+  .card{
+    min-width:24px;
+    height:35px;
+    font-size:10px;
+  }
+
+  .hand .card{
+    min-width:32px;
+    height:46px;
+  }
+}
