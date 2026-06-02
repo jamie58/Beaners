@@ -119,21 +119,6 @@ $("takeTopDiscardBtn").onclick = () => { playSound("pickup"); vibrate(20); socke
 $("takeAllDiscardBtn").onclick = () => { if(confirm("Pick up the entire discard pile?")) { playSound("shuffle"); vibrate([30,40,30]); socket.emit("takeAllDiscard", { roomCode: currentRoomCode }); } };
 $("nextRoundBtn").onclick = () => socket.emit("nextRound", { roomCode: currentRoomCode });
 
-function restartGame(){
-  if(confirm("Are you sure you want to restart this room? This clears the current game, hands and scores.")){
-    socket.emit("restartGame", { roomCode: currentRoomCode });
-  }
-}
-
-if ($("restartIconBtn")) $("restartIconBtn").onclick = restartGame;
-
-window.addEventListener("load", () => {
-  setTimeout(() => {
-    const splash = $("splashScreen");
-    if(splash) splash.classList.add("hiddenSplash");
-  }, 1300);
-});
-
 $("sortNumberBtn").onclick = () => {
   handSortMode = "number";
   localStorage.setItem("beanersSortMode", handSortMode);
@@ -242,7 +227,6 @@ socket.on("joinedRoom", ({roomCode, playerId, playerToken}) => {
   $("lobby").classList.add("hidden");
   $("game").classList.remove("hidden");
   if($("exitXBtn")) $("exitXBtn").classList.remove("hidden");
-  if($("restartIconBtn")) $("restartIconBtn").classList.remove("hidden");
   setupDiscardDrop();
 });
 
@@ -356,7 +340,7 @@ function renderState(){
   const state = latestState;
   if(!state) return;
 
-  if ($("copyRoomBtn")) $("copyRoomBtn").textContent = `JOIN CODE: ${state.roomCode}`;
+  if ($("copyRoomBtn")) $("copyRoomBtn").textContent = state.roomCode;
   if ($("bigJoinCode")) $("bigJoinCode").textContent = state.roomCode;
   if ($("compactBeaner")) $("compactBeaner").textContent = `R${state.round} • Beaner ${state.beaner}`;
   $("roundNo").textContent = state.round;
@@ -377,8 +361,9 @@ function renderState(){
   else $("status").textContent = "Game over.";
 
   const top = state.topDiscard;
-  $("takeTopDiscardBtn").textContent = top ? cardText(top) : "-";
+  $("takeTopDiscardBtn").innerHTML = top ? cardHtml(top) : "-";
   $("takeTopDiscardBtn").className = "card large discardButton " + cardClasses(top);
+  renderDiscardPreview(state);
 
   const me = state.players.find(p => p.id === myPlayerId);
   const isMyTurn = current?.id === myPlayerId;
@@ -487,7 +472,7 @@ function renderHand(){
   getSortedHand().filter(Boolean).forEach(card => {
     const el = document.createElement("div");
     el.className = "card " + cardClasses(card) + (selectedCardIds.has(card.id) ? " selected" : "");
-    el.textContent = cardText(card);
+    el.innerHTML = cardHtml(card);
     el.draggable = true;
     el.dataset.cardId = card.id;
     el.onclick = () => {
@@ -618,7 +603,7 @@ function createMeldElement(meld){
   meld.cards.forEach(card => {
     const c = document.createElement("span");
     c.className = "card " + cardClasses(card);
-    c.textContent = cardText(card);
+    c.innerHTML = cardHtml(card);
     cardWrap.appendChild(c);
   });
 
@@ -715,6 +700,25 @@ function playOnMeld(meldId, cardId){
   const swapBeaner = confirm("Swap for Beaner if possible?\n\nOK = swap if legal\nCancel = just add if legal");
   playSound("meld"); vibrate(25);
   socket.emit("playOnMeld", { roomCode: currentRoomCode, meldId, cardId, swapBeaner });
+}
+
+
+function cardHtml(card){
+  if(!card || !card.rank || !card.suit) return "?";
+  return `<span class="rank">${escapeHtml(card.rank)}</span><span class="suit">${escapeHtml(card.suit)}</span>`;
+}
+
+function renderDiscardPreview(state){
+  const wrap = $("discardPreview");
+  if(!wrap) return;
+  wrap.innerHTML = "";
+  const preview = (state.discardPreview || []).slice(1, 9);
+  preview.forEach(card => {
+    const div = document.createElement("div");
+    div.className = "miniDiscardCard " + cardClasses(card);
+    div.innerHTML = cardHtml(card);
+    wrap.appendChild(div);
+  });
 }
 
 function cardText(card){

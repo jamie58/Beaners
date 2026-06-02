@@ -12,17 +12,11 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div id="splashScreen" class="splashScreen">
-    <img src="/icons/icon-192.png" alt="Beaners" class="splashIcon">
-    <div class="splashTitle">BEANERS</div>
-    <div class="splashSub">Real-time chaos mode</div>
-  </div>
   <main>
     <header class="appBar">
       <div class="leftTopGroup">
         <button id="exitXBtn" class="exitX hidden" title="Exit game">×</button>
-        <button id="restartIconBtn" class="restartIcon hidden" title="Restart game">↻</button>
-        <button id="copyRoomBtn" class="roomPill copyRoomBtn">JOIN CODE: ----</button>
+        <button id="copyRoomBtn" class="roomPill copyRoomBtn">----</button>
       </div>
       <div class="beanersLogo"><span>🫘</span> BEANERS <span>♠</span></div>
       <div id="compactBeaner" class="beanerPill">R1 • Beaner A</div>
@@ -94,13 +88,14 @@
             <div class="centerPiles verticalPiles">
               <div class="pile deckPile">
                 <small class="pileLabel">Deck • <span id="deckCount">0</span></small>
-                <button id="drawDeckBtn" class="card back drawCardButton">🂠</button>
+                <button id="drawDeckBtn" class="card back drawCardButton" aria-label="Draw from deck"></button>
               </div>
 
               <div id="discardDropZone" class="pile discardDrop discardPile">
                 <small class="pileLabel">Discard • <span id="discardCount">0</span></small>
-                <button id="takeTopDiscardBtn" class="card large discardButton">-</button>
-                <button id="takeAllDiscardBtn" class="miniBtn">Take pile</button>
+                <button id="takeTopDiscardBtn" class="card large discardButton" aria-label="Take top discard">-</button>
+                <div id="discardPreview" class="discardPreview"></div>
+                <button id="takeAllDiscardBtn" class="miniBtn pickupPileBtn">Pickup Pile!</button>
               </div>
             </div>
 
