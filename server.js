@@ -326,6 +326,7 @@ function endRound(roomCode, winnerId){
     room.winnerMessage = `${winnerGame.name} wins Beaners with ${winnerGame.totalScore} points!`;
   } else {
     room.winnerMessage = `${winner?.name || "Someone"} yelled BEANERS!`;
+    scheduleAutoNextRound(roomCode);
   }
 }
 
@@ -458,6 +459,25 @@ function addBot(room){
 }
 
 
+
+function scheduleAutoNextRound(roomCode){
+  const room = rooms[roomCode];
+  if(!room || room.phase !== "roundOver") return;
+
+  if(room.autoNextRoundTimer) clearTimeout(room.autoNextRoundTimer);
+
+  room.autoNextRoundTimer = setTimeout(() => {
+    const currentRoom = rooms[roomCode];
+    if(!currentRoom || currentRoom.phase !== "roundOver") return;
+
+    currentRoom.round += 1;
+    currentRoom.starterIndex = (currentRoom.starterIndex + 1) % currentRoom.players.length;
+    resetRound(currentRoom);
+    emitRoom(roomCode);
+    maybeRunBotTurn(roomCode);
+  }, 15000);
+}
+
 io.on("connection", socket => {
   socket.on("createRoom", ({name, playerToken}) => {
     const roomCode=createRoomCode();
@@ -553,6 +573,7 @@ io.on("connection", socket => {
 
   socket.on("nextRound", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="roundOver") return;
+    if(room.autoNextRoundTimer) clearTimeout(room.autoNextRoundTimer);
     room.round += 1; room.starterIndex = (room.starterIndex + 1) % room.players.length;
     resetRound(room); emitRoom(roomCode); maybeRunBotTurn(roomCode);
   });

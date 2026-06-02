@@ -1805,3 +1805,123 @@ body{
     height:24px;
   }
 }
+
+
+/* v23 icon/discard/scorecard polish */
+.deckPile{
+  width:100% !important;
+  max-width:118px;
+}
+
+.deckPile .drawCardButton{
+  width:100% !important;
+  min-width:80px !important;
+  max-width:104px;
+  height:132px !important;
+  margin:0 auto !important;
+}
+
+.discardPile{
+  width:104px !important;
+}
+
+.discardPreview{
+  grid-template-columns:repeat(4, 1fr) !important;
+  gap:2px !important;
+  width:82px !important;
+}
+
+.miniDiscardCard{
+  height:28px !important;
+  font-size:9px !important;
+  padding:1px !important;
+}
+
+.miniDiscardCard .rank{
+  font-size:1.05em !important;
+  line-height:.85 !important;
+}
+
+.miniDiscardCard .suit{
+  font-size:1.15em !important;
+  line-height:.8 !important;
+}
+
+.miniDiscardCard.red,
+.miniDiscardCard.suit-♥,
+.miniDiscardCard.suit-♦{
+  color:#dc2626 !important;
+}
+
+.miniDiscardCard.suit-♠,
+.miniDiscardCard.suit-♣{
+  color:#1c1917 !important;
+}
+
+.discardButton.red,
+.discardPreview .red{
+  color:#dc2626 !important;
+}
+
+.scorecardBox tfoot td{
+  color:#facc15;
+  background:#3b1d77 !important;
+  font-weight:1000;
+}
+
+#scorecardCountdown{
+  color:#fde047;
+  font-size:1.15em;
+}
+
+@media(max-width:850px){
+  .deckPile{
+    width:92px !important;
+    max-width:92px;
+  }
+
+  .deckPile .drawCardButton{
+    min-width:70px !important;
+    max-width:84px;
+    height:112px !important;
+  }
+
+  .discardPreview{
+    width:68px !important;
+  }
+
+  .miniDiscardCard{
+    height:23px !important;
+    font-size:7.5px !important;
+  }
+
+  .miniDiscardCard .rank{
+    font-size:1em !important;
+  }
+
+  .miniDiscardCard .suit{
+    font-size:1.05em !important;
+  }
+}
+
+@media(max-width:430px){
+  .deckPile{
+    width:86px !important;
+    max-width:86px;
+  }
+
+  .deckPile .drawCardButton{
+    min-width:64px !important;
+    max-width:78px;
+    height:104px !important;
+  }
+
+  .discardPreview{
+    width:64px !important;
+  }
+
+  .miniDiscardCard{
+    height:21px !important;
+    font-size:7px !important;
+  }
+}

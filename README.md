@@ -1,9 +1,9 @@
-# Beaners v22
+# Beaners v23
 
 Updates:
-- Top-left join code now only displays the four digits.
-- Deck card back redesigned as a red patterned card back.
-- Discard pile shows the largest top card.
-- Previous 8 discard cards display underneath the top discard card.
-- Taking the entire discard pile still removes every card from the discard pile.
-- Card faces now render with larger rank and suit for better visibility on small cards.
+- Replaces app icons with the supplied Beaners artwork.
+- Deck draw area widened within the centre gap.
+- Discard preview text/symbols reduced so the previous 8 cards fit better.
+- Discard preview cards are coloured by suit.
+- Scorecard stays visible for 15 seconds.
+- After the 15-second scorecard, the next round starts automatically.

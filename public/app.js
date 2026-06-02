@@ -715,7 +715,7 @@ function renderDiscardPreview(state){
   const preview = (state.discardPreview || []).slice(1, 9);
   preview.forEach(card => {
     const div = document.createElement("div");
-    div.className = "miniDiscardCard " + cardClasses(card);
+    div.className = "miniDiscardCard " + cardClasses(card) + " suit-" + card.suit;
     div.innerHTML = cardHtml(card);
     wrap.appendChild(div);
   });
@@ -797,7 +797,7 @@ function showScorecard(state){
   html += `</tbody>
     <tfoot>
       <tr>
-        <td colspan="3">Lowest score after 13 rounds wins</td>
+        <td colspan="4">Next round starting in <span id="scorecardCountdown">15</span>s...</td>
       </tr>
     </tfoot>
   </table>`;
@@ -806,7 +806,23 @@ function showScorecard(state){
   modal.classList.remove("hidden");
 
   if(scorecardTimer) clearTimeout(scorecardTimer);
-  scorecardTimer = setTimeout(() => hideScorecard(), 10000);
+  startScorecardCountdown(15);
+  scorecardTimer = setTimeout(() => hideScorecard(), 15000);
+}
+
+
+function startScorecardCountdown(seconds){
+  const end = Date.now() + seconds * 1000;
+  const tick = () => {
+    const el = $("scorecardCountdown");
+    if(!el) return;
+    const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+    el.textContent = remaining;
+    if(remaining > 0 && !$("scorecardModal")?.classList.contains("hidden")){
+      setTimeout(tick, 250);
+    }
+  };
+  tick();
 }
 
 function hideScorecard(){
