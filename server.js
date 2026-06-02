@@ -17,6 +17,19 @@ function isBeaner(card, round){ return card.rank === beanerForRound(round); }
 function cardLabel(card){ return card ? `${card.rank}${card.suit}` : ""; }
 function cardScore(card, round){ let v = isBeaner(card, round) ? 50 : scoreValues[card.rank]; return round === 13 ? v * 2 : v; }
 function scoreHand(hand, round){ return hand.reduce((a,c)=>a+cardScore(c, round), 0); }
+
+function nowMs(){ return Date.now(); }
+function startTurnTimer(room){ room.turnStartedAt = nowMs(); }
+function finishTurnTimer(room, player){
+  if(!room.turnStartedAt || !player) return;
+  const elapsed = Math.max(0, nowMs() - room.turnStartedAt);
+  player.turnTimeTotalMs = (player.turnTimeTotalMs || 0) + elapsed;
+  player.turnCount = (player.turnCount || 0) + 1;
+}
+function averageTurnSeconds(player){
+  if(!player.turnCount) return null;
+  return Math.round((player.turnTimeTotalMs / player.turnCount) / 100) / 10;
+}
 function cleanName(name){ return String(name || "Player").trim().slice(0,20) || "Player"; }
 function shuffle(deck){ for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; } return deck; }
 function createDeck(){ const deck=[]; for(const suit of suits){ for(const rank of ranks){ deck.push({rank,suit,id:`${rank}${suit}-${Math.random().toString(36).slice(2,9)}`}); } } return shuffle(deck); }
@@ -158,6 +171,66 @@ function addCardToMeldWouldBeValid(meld, card, round){
   return true;
 }
 
+
+function rankValue(rank){
+  if(rank === "A") return 1;
+  if(rank === "J") return 11;
+  if(rank === "Q") return 12;
+  if(rank === "K") return 13;
+  return Number(rank);
+}
+function nextRank(rank){
+  let v = rankValue(rank) + 1;
+  if(v > 13) v = 1;
+  return rankFromValue(v);
+}
+function prevRank(rank){
+  let v = rankValue(rank) - 1;
+  if(v < 1) v = 13;
+  return rankFromValue(v);
+}
+function applyValidationToMeld(meld, validation){
+  meld.type = validation.type;
+  meld.display = validation.display;
+  meld.rank = validation.rank;
+  meld.suit = validation.suit;
+  meld.ranks = validation.ranks;
+  meld.beanerPositions = validation.beanerPositions || [];
+}
+function trySmartAddToRun(meld, card, round){
+  if(meld.type !== "run") return null;
+  const current = validateMeld(meld.cards, round);
+  if(!current || current.type !== "run" || !current.ranks || !current.suit) return null;
+  if(!isBeaner(card, round) && card.suit !== current.suit) return null;
+
+  const frontRank = prevRank(current.ranks[0]);
+  const backRank = nextRank(current.ranks[current.ranks.length - 1]);
+
+  if(!isBeaner(card, round)){
+    if(card.rank === frontRank){
+      const newCards = [card, ...meld.cards];
+      const val = validateMeld(newCards, round);
+      if(val && val.type === "run") return { cards:newCards, validation:val };
+    }
+    if(card.rank === backRank){
+      const newCards = [...meld.cards, card];
+      const val = validateMeld(newCards, round);
+      if(val && val.type === "run") return { cards:newCards, validation:val };
+    }
+    return null;
+  }
+
+  let newCards = [...meld.cards, card];
+  let val = validateMeld(newCards, round);
+  if(val && val.type === "run") return { cards:newCards, validation:val };
+
+  newCards = [card, ...meld.cards];
+  val = validateMeld(newCards, round);
+  if(val && val.type === "run") return { cards:newCards, validation:val };
+
+  return null;
+}
+
 function findSwapCandidate(meld, playedCard, round){
   const beaner = beanerForRound(round);
   const positions = meld.cards
@@ -206,10 +279,11 @@ function publicRoomState(roomCode){
     discardCount: room.discardPile.length,
     topDiscard: room.discardPile[room.discardPile.length - 1] || null,
     winnerMessage: room.winnerMessage || "",
+    turnStartedAt: room.turnStartedAt || null,
     roundScores: room.roundScores || [],
     players: room.players.map((p,i)=>({
       id:p.id, name:p.name, cardCount:p.hand.length, totalScore:p.totalScore,
-      lastRoundScore:p.lastRoundScore, isDown:p.isDown, isBot:!!p.isBot, disconnected:!!p.disconnected, hasPickedUp:!!p.hasPickedUp, seatKey:p.seatKey || null, index:i
+      lastRoundScore:p.lastRoundScore, isDown:p.isDown, isBot:!!p.isBot, disconnected:!!p.disconnected, hasPickedUp:!!p.hasPickedUp, seatKey:p.seatKey || null, avgTurnSeconds: averageTurnSeconds(p), turnCount:p.turnCount || 0, index:i
     })),
     tableMelds: room.tableMelds.map(m=>({
       id:m.id, ownerId:m.ownerId, ownerName:room.players.find(p=>p.id===m.ownerId)?.name || "Player",
@@ -228,10 +302,11 @@ function resetRound(room){
   room.deck=createDeck(); room.discardPile=[]; room.tableMelds=[]; room.phase="playing"; room.winnerMessage="";
   room.currentPlayerIndex = room.starterIndex;
   for(const p of room.players){
-    p.hand=[]; p.isDown=false; p.lastRoundScore=null; p.hasPickedUp=false;
+    p.hand=[]; p.isDown=false; p.lastRoundScore=null; p.hasPickedUp=false; p.turnTimeTotalMs = 0; p.turnCount = 0;
     for(let i=0;i<7;i++) p.hand.push(room.deck.pop());
   }
   room.discardPile.push(room.deck.pop());
+  startTurnTimer(room);
 }
 
 function endRound(roomCode, winnerId){
@@ -289,7 +364,15 @@ function botTryAdd(room, bot){
         refreshMeld(meld, room.round);
         return true;
       }
-      if(addCardToMeldWouldBeValid(meld, card, room.round)){
+      if(meld.type === "run"){
+        const smart = trySmartAddToRun(meld, card, room.round);
+        if(smart){
+          bot.hand = bot.hand.filter(c=>c.id!==card.id);
+          meld.cards = smart.cards;
+          applyValidationToMeld(meld, smart.validation);
+          return true;
+        }
+      } else if(addCardToMeldWouldBeValid(meld, card, room.round)){
         bot.hand = bot.hand.filter(c=>c.id!==card.id);
         meld.cards.push(card);
         refreshMeld(meld, room.round);
@@ -331,6 +414,7 @@ function runBotTurn(roomCode){
     else if(room.discardPile.length) bot.hand.push(room.discardPile.pop());
   }
   if(bot.hand.length){
+    finishTurnTimer(room, bot);
     const idx = botDiscardIndex(bot, room.round);
     room.discardPile.push(bot.hand.splice(idx,1)[0]);
   }
@@ -339,6 +423,7 @@ function runBotTurn(roomCode){
   bot.hasPickedUp = false;
   room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
   room.players[room.currentPlayerIndex].hasPickedUp = false;
+  startTurnTimer(room);
   emitRoom(roomCode);
   maybeRunBotTurn(roomCode);
 }
@@ -535,6 +620,16 @@ io.on("connection", socket => {
       return;
     }
 
+    if(meld.type === "run"){
+      const smart = trySmartAddToRun(meld, card, room.round);
+      if(!smart) return socket.emit("errorMessage","That card does not fit at either end of that run.");
+      player.hand = player.hand.filter(c=>c.id!==cardId);
+      meld.cards = smart.cards;
+      applyValidationToMeld(meld, smart.validation);
+      emitRoom(roomCode);
+      return;
+    }
+
     if(!addCardToMeldWouldBeValid(meld, card, room.round)) return socket.emit("errorMessage","That card does not fit that meld.");
     player.hand = player.hand.filter(c=>c.id!==cardId);
     meld.cards.push(card);
@@ -561,11 +656,13 @@ io.on("connection", socket => {
     if(!current || current.id!==socket.id) return socket.emit("errorMessage","Not your turn.");
     if(!current.hasPickedUp) return socket.emit("errorMessage","You must pick up before discarding.");
     const idx=current.hand.findIndex(c=>c.id===cardId); if(idx<0) return socket.emit("errorMessage","Card not found.");
+    finishTurnTimer(room, current);
     room.discardPile.push(current.hand.splice(idx,1)[0]);
     if(current.hand.length===0){ endRound(roomCode,current.id); emitRoom(roomCode); return; }
     current.hasPickedUp = false;
     room.currentPlayerIndex=(room.currentPlayerIndex+1)%room.players.length;
     room.players[room.currentPlayerIndex].hasPickedUp = false;
+    startTurnTimer(room);
     emitRoom(roomCode); maybeRunBotTurn(roomCode);
   });
 

@@ -1514,3 +1514,47 @@ body{
     font-size:15px;
   }
 }
+
+
+/* v19 smart runs, scrolling hand, timing, compact melds */
+.leftTopGroup{display:flex;align-items:center;gap:5px;justify-self:start}
+.exitX{width:28px;height:28px;min-width:28px;padding:0;margin:0;border-radius:999px;background:rgba(153,27,27,.94);color:white;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.seat.current.turnOrange{animation:turnPulseOrange 1s infinite}
+.seat.current.turnRed{animation:turnPulseRed .75s infinite}
+@keyframes turnPulseOrange{0%,100%{outline:4px solid rgba(249,115,22,.4);box-shadow:0 0 0 rgba(249,115,22,0)}50%{outline:5px solid rgba(249,115,22,1);box-shadow:0 0 18px rgba(249,115,22,.85)}}
+@keyframes turnPulseRed{0%,100%{outline:4px solid rgba(220,38,38,.45);box-shadow:0 0 0 rgba(220,38,38,0)}50%{outline:5px solid rgba(220,38,38,1);box-shadow:0 0 20px rgba(220,38,38,.9)}}
+
+.meld{min-width:auto!important;width:fit-content!important;max-width:100%}
+.meldCards{width:fit-content;max-width:100%}
+.seatTop .seatMelds,.seatBottom .seatMelds{display:flex!important;flex-wrap:wrap;align-content:flex-start;gap:3px}
+.seatTop .meld,.seatBottom .meld{width:auto!important;max-width:100%}
+
+.handPanel{position:sticky;bottom:0;z-index:60;overflow:visible!important}
+.hand{overflow-x:auto!important;overflow-y:visible!important;flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch;scrollbar-width:thin;padding-top:10px;padding-bottom:4px;position:relative;z-index:70}
+.hand .card{flex:0 0 auto;position:relative;z-index:75}
+.hand .card.selected{z-index:100}
+
+@media(max-width:850px){
+  .exitX{width:24px;height:24px;min-width:24px;font-size:19px}
+  .seatTop{height:124px}
+  .seatBottom{height:132px}
+  .seatLeft,.seatRight{top:132px;bottom:140px}
+  #playingControls{height:calc(100dvh - 172px)}
+  .seatTop .seatMelds,.seatBottom .seatMelds{display:flex!important;flex-wrap:wrap;gap:3px}
+  .seatTop .meld,.seatBottom .meld,.seatLeft .meld,.seatRight .meld{width:auto!important;min-width:auto!important}
+  .meld{padding:3px}
+  .meld .card{min-width:20px;width:20px;height:29px;font-size:8px;margin:0}
+  .seatTop .meld .card,.seatBottom .meld .card{min-width:22px;width:22px;height:31px;font-size:8px}
+  .handPanel{overflow:visible!important}
+  .hand{min-height:58px;padding-top:12px;overflow-x:auto!important;overflow-y:visible!important}
+  .hand .card{min-width:34px;height:48px}
+}
+@media(max-width:430px){
+  .seatTop{height:118px}
+  .seatBottom{height:124px}
+  .seatLeft,.seatRight{top:126px;bottom:132px}
+  #playingControls{height:calc(100dvh - 166px)}
+  .meld .card{min-width:18px;width:18px;height:27px;font-size:7.5px}
+  .seatTop .meld .card,.seatBottom .meld .card{min-width:20px;width:20px;height:29px}
+  .hand .card{min-width:32px;height:46px}
+}

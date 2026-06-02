@@ -26,6 +26,7 @@ let latestState = null;
 let pendingChoiceCardId = null;
 let previousPhase = null;
 let previousRound = null;
+let timerRenderInterval = null;
 let lastShownScoreRound = null;
 let scorecardTimer = null;
 let audioContext = null;
@@ -72,6 +73,7 @@ function doExitGame(){
 
 if ($("exitGameBtn")) $("exitGameBtn").onclick = doExitGame;
 if ($("exitGameBtn2")) $("exitGameBtn2").onclick = doExitGame;
+if ($("exitXBtn")) $("exitXBtn").onclick = doExitGame;
 
 
 document.querySelectorAll(".seatPick").forEach(btn => {
@@ -137,6 +139,7 @@ socket.on("joinedRoom", ({roomCode, playerId, playerToken}) => {
   $("roomCode").textContent = roomCode;
   $("lobby").classList.add("hidden");
   $("game").classList.remove("hidden");
+  if($("exitXBtn")) $("exitXBtn").classList.remove("hidden");
   setupDiscardDrop();
 });
 
@@ -164,6 +167,7 @@ socket.on("roomState", state => {
 
   previousPhase = state.phase;
   previousRound = state.round;
+  ensureTimerRenderer();
 });
 
 socket.on("yourHand", hand => {
@@ -243,6 +247,14 @@ function renderState(){
 }
 
 
+
+function ensureTimerRenderer(){
+  if(timerRenderInterval) return;
+  timerRenderInterval = setInterval(() => {
+    if(latestState?.phase === "playing") renderSeats();
+  }, 1000);
+}
+
 function renderSeatStatus(){
   const box = $("seatStatus");
   if(!box || !latestState) return;
@@ -311,7 +323,7 @@ function renderHand(){
   const wrap = $("hand");
   if(!wrap) return;
   wrap.innerHTML = "";
-  getSortedHand().forEach(card => {
+  getSortedHand().filter(Boolean).forEach(card => {
     const el = document.createElement("div");
     el.className = "card " + cardClasses(card) + (selectedCardIds.has(card.id) ? " selected" : "");
     el.textContent = cardText(card);
@@ -383,8 +395,13 @@ function renderSeats(){
   placement.forEach(({player, seat}) => {
     if(!player || !$(seat)) return;
     const box = $(seat);
-    box.className = box.className.replace(/\s?current|\s?you/g, "");
-    if(player.index === state.currentPlayerIndex && state.phase === "playing") box.classList.add("current");
+    box.className = box.className.replace(/\s?current|\s?you|\s?turnOrange|\s?turnRed/g, "");
+    if(player.index === state.currentPlayerIndex && state.phase === "playing") {
+      box.classList.add("current");
+      const elapsed = state.turnStartedAt ? Date.now() - state.turnStartedAt : 0;
+      if(elapsed >= 25000) box.classList.add("turnRed");
+      else if(elapsed >= 15000) box.classList.add("turnOrange");
+    }
     if(player.id === myPlayerId) box.classList.add("you");
 
     const melds = state.tableMelds.filter(m => m.ownerId === player.id);
@@ -536,7 +553,10 @@ function playOnMeld(meldId, cardId){
   socket.emit("playOnMeld", { roomCode: currentRoomCode, meldId, cardId, swapBeaner });
 }
 
-function cardText(card){ return `${card.rank}${card.suit}`; }
+function cardText(card){
+  if(!card || !card.rank || !card.suit) return "?";
+  return `${card.rank}${card.suit}`;
+}
 
 function cardClasses(card){
   if(!card || !latestState) return "";
@@ -591,6 +611,7 @@ function showScorecard(state){
         <th>Player</th>
         <th>Round Score</th>
         <th>Running Total</th>
+        <th>Avg Turn</th>
       </tr>
     </thead>
     <tbody>`;
@@ -601,6 +622,7 @@ function showScorecard(state){
       <td>${escapeHtml(player.name)}${player.id === myPlayerId ? " (you)" : ""}</td>
       <td>${roundScore}</td>
       <td>${player.totalScore}</td>
+      <td>${player.avgTurnSeconds == null ? "-" : player.avgTurnSeconds + "s"}</td>
     </tr>`;
   });
 
