@@ -1,18 +1,13 @@
-# Beaners v7
+# Beaners v8
 
-Mobile optimisation:
-- full viewport-height game layout
-- compact mobile header/status
-- table scales to fit phone width/height
-- player score panel hidden during play on mobile
-- hand/actions stay at bottom
-- smaller cards/melds on mobile
+Updates:
+- refresh/reload attempts to rejoin the same room and hand
+- removes big header; compact room number top-left and Beaner top-right
+- mobile table uses more available height
+- no scrolling inside meld areas on mobile
+- meld/cards scale smaller to fit
+- active player's green border flashes
+- simple card-move animation
+- simple shuffle sound when a round starts
 
-Also includes v6 fixes:
-- runs must be in exact order
-- correct Beaner run positions
-- 10-second scorecard after each round
-
-Render:
-Build Command: npm install
-Start Command: npm start
+Note: refresh rejoin works while the Render server is still awake and the room still exists in memory.

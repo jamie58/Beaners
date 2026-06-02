@@ -1,4 +1,20 @@
 const socket = io();
+const SESSION_ROOM_KEY = "beanersRoomCode";
+const SESSION_PLAYER_KEY = "beanersPlayerId";
+
+socket.on("connect", () => {
+  const savedRoom = localStorage.getItem(SESSION_ROOM_KEY);
+  const savedPlayer = localStorage.getItem(SESSION_PLAYER_KEY);
+  if (savedRoom && savedPlayer && !currentRoomCode) {
+    socket.emit("rejoinRoom", { roomCode: savedRoom, playerId: savedPlayer });
+  }
+});
+
+socket.on("rejoinFailed", () => {
+  localStorage.removeItem(SESSION_ROOM_KEY);
+  localStorage.removeItem(SESSION_PLAYER_KEY);
+});
+
 
 let currentRoomCode = null;
 let myPlayerId = null;
@@ -10,6 +26,8 @@ let previousPhase = null;
 let previousRound = null;
 let lastShownScoreRound = null;
 let scorecardTimer = null;
+let audioContext = null;
+let lastHandCount = 0;
 
 const $ = id => document.getElementById(id);
 
@@ -48,6 +66,8 @@ $("closeScorecard").onclick = () => hideScorecard();
 socket.on("joinedRoom", ({roomCode, playerId}) => {
   currentRoomCode = roomCode;
   myPlayerId = playerId;
+  localStorage.setItem(SESSION_ROOM_KEY, roomCode);
+  localStorage.setItem(SESSION_PLAYER_KEY, playerId);
   $("roomCode").textContent = roomCode;
   $("lobby").classList.add("hidden");
   $("game").classList.remove("hidden");
@@ -69,7 +89,7 @@ socket.on("roomState", state => {
   const shouldAnimate = state.phase === "playing" && (previousPhase !== "playing" || previousRound !== state.round);
   latestState = state;
   renderState();
-  if (shouldAnimate) showDealAnimation();
+  if (shouldAnimate) { showDealAnimation(); playShuffleSound(); }
 
   if ((state.phase === "roundOver" || state.phase === "gameOver") && lastShownScoreRound !== state.round) {
     showScorecard(state);
@@ -84,6 +104,8 @@ socket.on("yourHand", hand => {
   currentHand = hand;
   selectedCardIds = new Set([...selectedCardIds].filter(id => hand.some(c => c.id === id)));
   renderHand();
+  if (lastHandCount && hand.length < lastHandCount) animateCardMove();
+  lastHandCount = hand.length;
 });
 
 socket.on("chooseMeldForCard", ({cardId, meldIds}) => {
@@ -111,6 +133,8 @@ function renderState(){
   const state = latestState;
   if(!state) return;
 
+  if ($("compactRoom")) $("compactRoom").textContent = `Room ${state.roomCode}`;
+  if ($("compactBeaner")) $("compactBeaner").textContent = `R${state.round} Beaner: ${state.beaner}`;
   $("roundNo").textContent = state.round;
   $("beanerRank").textContent = state.beaner;
   $("deckCount").textContent = state.deckCount;
@@ -307,6 +331,35 @@ function cardClasses(card){
   return classes.join(" ");
 }
 
+
+
+function animateCardMove(){
+  const layer = $("fxLayer");
+  if(!layer) return;
+  const el = document.createElement("div");
+  el.className = "movingCardFx";
+  el.textContent = "🂠";
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), 650);
+}
+
+function playShuffleSound(){
+  try{
+    audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioContext.currentTime;
+    for(let i=0;i<5;i++){
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(180 + i*35, now + i*0.045);
+      gain.gain.setValueAtTime(0.025, now + i*0.045);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i*0.045 + 0.04);
+      osc.connect(gain).connect(audioContext.destination);
+      osc.start(now + i*0.045);
+      osc.stop(now + i*0.045 + 0.05);
+    }
+  } catch(e){}
+}
 
 function showScorecard(state){
   const modal = $("scorecardModal");
