@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Jamie's Card Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <h1>Jamie's Card Game</h1>
+
+    <section id="lobby" class="panel">
+      <input id="nameInput" placeholder="Your name" maxlength="20">
+      <button id="createBtn">Create Room</button>
+
+      <hr>
+
+      <input id="roomInput" placeholder="Room code" maxlength="4">
+      <button id="joinBtn">Join Room</button>
+    </section>
+
+    <section id="game" class="panel hidden">
+      <h2>Room: <span id="roomCode"></span></h2>
+      <p id="status"></p>
+
+      <button id="startBtn">Start Game</button>
+
+      <div class="board">
+        <div>
+          <h3>Deck</h3>
+          <button id="drawBtn">Draw Card</button>
+          <p><span id="deckCount">0</span> cards left</p>
+        </div>
+
+        <div>
+          <h3>Discard</h3>
+          <button id="takeDiscardBtn">Take Discard</button>
+          <div id="discardCard" class="card large">-</div>
+        </div>
+      </div>
+
+      <h3>Players</h3>
+      <ul id="players"></ul>
+
+      <h3>Your Hand</h3>
+      <p class="hint">Tap a card to discard it.</p>
+      <div id="hand" class="hand"></div>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f2f2f2;
+  color: #222;
+}
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+h1 {
+  text-align: center;
+}
+
+.panel {
+  background: white;
+  padding: 18px;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.hidden {
+  display: none;
+}
+
+input, button {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px;
+  margin: 7px 0;
+  font-size: 18px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: #222;
+  color: white;
+  font-weight: bold;
+}
+
+button:disabled {
+  opacity: 0.4;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.card {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 54px;
+  height: 78px;
+  margin: 5px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 2px solid #222;
+  background: white;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.large {
+  width: 78px;
+  height: 108px;
+  font-size: 28px;
+}
+
+.red {
+  color: #c70000;
+}
+
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hint {
+  color: #666;
+  font-size: 14px;
+}
+
+li {
+  margin: 8px 0;
+}
