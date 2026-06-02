@@ -1,13 +1,43 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 app.use(express.static("public"));
 
-const rooms = {};
+const DATA_DIR = path.join(__dirname, "data");
+const ROOMS_FILE = path.join(DATA_DIR, "rooms.json");
+
+function ensureDataDir(){
+  if(!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive:true });
+}
+
+function loadRooms(){
+  try{
+    ensureDataDir();
+    if(!fs.existsSync(ROOMS_FILE)) return {};
+    const data = JSON.parse(fs.readFileSync(ROOMS_FILE, "utf8"));
+    return data && typeof data === "object" ? data : {};
+  } catch(e){
+    console.error("Could not load rooms:", e.message);
+    return {};
+  }
+}
+
+function saveRooms(){
+  try{
+    ensureDataDir();
+    fs.writeFileSync(ROOMS_FILE, JSON.stringify(rooms, null, 2));
+  } catch(e){
+    console.error("Could not save rooms:", e.message);
+  }
+}
+
+const rooms = loadRooms();
 const suits = ["♠", "♥", "♦", "♣"];
 const ranks = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 const scoreValues = {"A":15,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,"J":10,"Q":10,"K":10};
@@ -294,6 +324,7 @@ function publicRoomState(roomCode){
 
 function emitRoom(roomCode){
   const room = rooms[roomCode]; if(!room) return;
+  saveRooms();
   io.to(roomCode).emit("roomState", publicRoomState(roomCode));
   for(const p of room.players) if(!p.isBot) io.to(p.id).emit("yourHand", p.hand);
 }
@@ -700,6 +731,37 @@ io.on("connection", socket => {
   });
 
 
+
+
+  socket.on("restartGame", ({ roomCode }) => {
+    const code = String(roomCode || "").replace(/\D/g, "").trim();
+    const room = rooms[code];
+    if(!room) return socket.emit("errorMessage","Room not found.");
+
+    room.phase = "lobby";
+    room.round = 1;
+    room.deck = [];
+    room.discardPile = [];
+    room.tableMelds = [];
+    room.roundScores = [];
+    room.winnerMessage = "";
+    room.currentPlayerIndex = 0;
+    room.starterIndex = 0;
+    room.turnStartedAt = null;
+
+    for(const p of room.players){
+      p.hand = [];
+      p.isDown = false;
+      p.totalScore = 0;
+      p.lastRoundScore = null;
+      p.hasPickedUp = false;
+      p.turnTimeTotalMs = 0;
+      p.turnCount = 0;
+      p.disconnected = false;
+    }
+
+    emitRoom(code);
+  });
 
   socket.on("exitGame", ({ roomCode }) => {
     const room = rooms[String(roomCode || "").trim()];

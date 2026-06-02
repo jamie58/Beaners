@@ -119,6 +119,21 @@ $("takeTopDiscardBtn").onclick = () => { playSound("pickup"); vibrate(20); socke
 $("takeAllDiscardBtn").onclick = () => { if(confirm("Pick up the entire discard pile?")) { playSound("shuffle"); vibrate([30,40,30]); socket.emit("takeAllDiscard", { roomCode: currentRoomCode }); } };
 $("nextRoundBtn").onclick = () => socket.emit("nextRound", { roomCode: currentRoomCode });
 
+function restartGame(){
+  if(confirm("Are you sure you want to restart this room? This clears the current game, hands and scores.")){
+    socket.emit("restartGame", { roomCode: currentRoomCode });
+  }
+}
+
+if ($("restartIconBtn")) $("restartIconBtn").onclick = restartGame;
+
+window.addEventListener("load", () => {
+  setTimeout(() => {
+    const splash = $("splashScreen");
+    if(splash) splash.classList.add("hiddenSplash");
+  }, 1300);
+});
+
 $("sortNumberBtn").onclick = () => {
   handSortMode = "number";
   localStorage.setItem("beanersSortMode", handSortMode);
@@ -227,6 +242,7 @@ socket.on("joinedRoom", ({roomCode, playerId, playerToken}) => {
   $("lobby").classList.add("hidden");
   $("game").classList.remove("hidden");
   if($("exitXBtn")) $("exitXBtn").classList.remove("hidden");
+  if($("restartIconBtn")) $("restartIconBtn").classList.remove("hidden");
   setupDiscardDrop();
 });
 

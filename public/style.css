@@ -1622,3 +1622,141 @@ body{
     font-size:13px;
   }
 }
+
+
+/* v22 icon-inspired polish + persistence/restart controls */
+body{
+  background:
+    radial-gradient(circle at 50% 30%, rgba(139,92,246,.35), transparent 32%),
+    repeating-conic-gradient(from 0deg at 50% 20%, rgba(255,255,255,.06) 0deg 8deg, transparent 8deg 18deg),
+    linear-gradient(135deg,#3b1d78,#6d28d9 48%,#21103f);
+}
+
+.splashScreen{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at center, rgba(255,255,255,.14), transparent 34%),
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,.08) 0deg 8deg, transparent 8deg 18deg),
+    linear-gradient(135deg,#3b1d78,#6d28d9 52%,#21103f);
+  color:white;
+  transition:opacity .35s ease, visibility .35s ease;
+}
+
+.hiddenSplash{
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+
+.splashIcon{
+  width:118px;
+  height:118px;
+  border-radius:24px;
+  box-shadow:0 16px 45px rgba(0,0,0,.35);
+  margin-bottom:14px;
+}
+
+.splashTitle{
+  font-size:34px;
+  font-weight:1000;
+  letter-spacing:2px;
+  text-shadow:0 4px 0 #171124, 0 8px 20px rgba(0,0,0,.45);
+}
+
+.splashSub{
+  margin-top:5px;
+  font-size:15px;
+  color:#fde68a;
+  font-weight:800;
+}
+
+.appBar{
+  background:rgba(22,12,45,.35);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:999px;
+  padding:3px;
+  backdrop-filter:blur(10px);
+}
+
+.beanersLogo{
+  background:linear-gradient(180deg,#ffffff,#fef3c7);
+  color:#2b174f;
+  border:3px solid #171124;
+  box-shadow:0 4px 0 #171124,0 8px 20px rgba(0,0,0,.28);
+  text-shadow:1px 1px 0 #fff,0 2px 0 rgba(255,255,255,.5);
+}
+
+.roomPill,.soundBtn{
+  background:#27134e;
+  border:2px solid rgba(255,255,255,.22);
+}
+
+.beanerPill{
+  background:linear-gradient(180deg,#fff1bf,#f59e0b);
+  color:#27134e;
+  border:2px solid #171124;
+  box-shadow:0 3px 0 #171124;
+}
+
+.tableFelt{
+  background:
+    radial-gradient(circle at center, rgba(255,255,255,.18), transparent 36%),
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,.045) 0deg 8deg, transparent 8deg 18deg),
+    linear-gradient(135deg,#4c1d95,#7c3aed 50%,#2e1065);
+  border-color:#171124;
+}
+
+.restartIcon{
+  width:28px;
+  height:28px;
+  min-width:28px;
+  padding:0;
+  margin:0;
+  border-radius:999px;
+  background:rgba(251,191,36,.95);
+  color:#27134e;
+  font-size:20px;
+  font-weight:1000;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 4px 14px rgba(0,0,0,.25);
+  border:2px solid #171124;
+}
+
+.startLogo{
+  background:linear-gradient(180deg,#ffffff,#fef3c7);
+  color:#2b174f;
+  border:3px solid #171124;
+  box-shadow:0 5px 0 #171124,0 12px 24px rgba(0,0,0,.25);
+  text-shadow:1px 1px 0 #fff;
+}
+
+.panel,.seat,.handPanel{
+  border:2px solid rgba(23,17,36,.18);
+}
+
+@media(max-width:850px){
+  .restartIcon{
+    width:24px;
+    height:24px;
+    min-width:24px;
+    font-size:17px;
+  }
+
+  .splashIcon{
+    width:96px;
+    height:96px;
+  }
+
+  .splashTitle{
+    font-size:28px;
+  }
+}
