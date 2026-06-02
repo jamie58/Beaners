@@ -1,13 +1,11 @@
-# Beaners v8
+# Beaners v10
 
-Updates:
-- refresh/reload attempts to rejoin the same room and hand
-- removes big header; compact room number top-left and Beaner top-right
-- mobile table uses more available height
-- no scrolling inside meld areas on mobile
-- meld/cards scale smaller to fit
-- active player's green border flashes
-- simple card-move animation
-- simple shuffle sound when a round starts
+Adds:
+- stable refresh/rejoin from v9
+- iOS/Android touch drag
+- larger mobile top/bottom meld areas
+- Sort by Number button
+- Sort by Suit button
 
-Note: refresh rejoin works while the Render server is still awake and the room still exists in memory.
+Note:
+Sorting only changes your local hand display order.

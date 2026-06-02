@@ -21,6 +21,7 @@ function cleanName(name){ return String(name || "Player").trim().slice(0,20) || 
 function shuffle(deck){ for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; } return deck; }
 function createDeck(){ const deck=[]; for(const suit of suits){ for(const rank of ranks){ deck.push({rank,suit,id:`${rank}${suit}-${Math.random().toString(36).slice(2,9)}`}); } } return shuffle(deck); }
 function createRoomCode(){ let code; do code = Math.floor(1000 + Math.random()*9000).toString(); while(rooms[code]); return code; }
+function createPlayerToken(){ return "pt-" + Math.random().toString(36).slice(2) + Date.now().toString(36); }
 function rankFromValue(v){ if(v===1 || v===14) return "A"; if(v===11) return "J"; if(v===12) return "Q"; if(v===13) return "K"; return String(v); }
 
 function runSequencesForLength(length){
@@ -194,7 +195,7 @@ function publicRoomState(roomCode){
     roundScores: room.roundScores || [],
     players: room.players.map((p,i)=>({
       id:p.id, name:p.name, cardCount:p.hand.length, totalScore:p.totalScore,
-      lastRoundScore:p.lastRoundScore, isDown:p.isDown, isBot:!!p.isBot, index:i
+      lastRoundScore:p.lastRoundScore, isDown:p.isDown, isBot:!!p.isBot, disconnected:!!p.disconnected, index:i
     })),
     tableMelds: room.tableMelds.map(m=>({
       id:m.id, ownerId:m.ownerId, ownerName:room.players.find(p=>p.id===m.ownerId)?.name || "Player",
@@ -329,23 +330,39 @@ function addBot(room){
   const names=["Bot Barry","Bot Brenda","Bot Bill","Bot Bella"];
   const used=new Set(room.players.map(p=>p.name));
   const name=names.find(n=>!used.has(n)) || `Bot ${room.players.length+1}`;
-  room.players.push({id:`bot-${Math.random().toString(36).slice(2,10)}`, name, hand:[], isDown:false, totalScore:0, lastRoundScore:null, isBot:true});
+  room.players.push({id:`bot-${Math.random().toString(36).slice(2,10)}`, token:createPlayerToken(), name, hand:[], isDown:false, totalScore:0, lastRoundScore:null, isBot:true, disconnected:false});
 }
 
 io.on("connection", socket => {
-  socket.on("createRoom", ({name}) => {
+  socket.on("createRoom", ({name, playerToken}) => {
     const roomCode=createRoomCode();
-    rooms[roomCode]={players:[{id:socket.id,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:"",roundScores:[]};
-    socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id}); emitRoom(roomCode);
+    const token = playerToken || createPlayerToken();
+    rooms[roomCode]={players:[{id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:"",roundScores:[]};
+    socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token}); emitRoom(roomCode);
   });
 
-  socket.on("joinRoom", ({roomCode,name}) => {
+  socket.on("joinRoom", ({roomCode,name,playerToken}) => {
     roomCode=String(roomCode||"").trim(); const room=rooms[roomCode];
     if(!room) return socket.emit("errorMessage","Room not found.");
+
+    const token = playerToken || createPlayerToken();
+    const existing = room.players.find(p => p.token === token && !p.isBot);
+    if(existing){
+      const oldId = existing.id;
+      existing.id = socket.id;
+      existing.disconnected = false;
+      if(name) existing.name = cleanName(name);
+      for(const meld of room.tableMelds){ if(meld.ownerId === oldId) meld.ownerId = socket.id; }
+      socket.join(roomCode);
+      socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
+      emitRoom(roomCode);
+      return;
+    }
+
     if(room.phase!=="lobby") return socket.emit("errorMessage","Game already started.");
     if(room.players.length>=4) return socket.emit("errorMessage","Room is full.");
-    room.players.push({id:socket.id,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false});
-    socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id}); emitRoom(roomCode);
+    room.players.push({id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false});
+    socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token}); emitRoom(roomCode);
   });
 
   socket.on("addBot", ({roomCode})=>{ const room=rooms[roomCode]; if(!room || room.phase!=="lobby") return; if(room.players.length>=4) return; addBot(room); emitRoom(roomCode); });
@@ -460,15 +477,15 @@ io.on("connection", socket => {
   });
 
 
-  socket.on("rejoinRoom", ({ roomCode, playerId }) => {
+  socket.on("rejoinRoom", ({ roomCode, playerToken }) => {
     roomCode = String(roomCode || "").trim();
     const room = rooms[roomCode];
-    if (!room || !playerId) {
+    if (!room || !playerToken) {
       socket.emit("rejoinFailed");
       return;
     }
 
-    const player = room.players.find(p => p.id === playerId && !p.isBot);
+    const player = room.players.find(p => p.token === playerToken && !p.isBot);
     if (!player) {
       socket.emit("rejoinFailed");
       return;
@@ -476,17 +493,17 @@ io.on("connection", socket => {
 
     const oldId = player.id;
     player.id = socket.id;
+    player.disconnected = false;
 
-    socket.join(roomCode);
-    socket.emit("joinedRoom", { roomCode, playerId: socket.id });
-
-    // Update meld ownership from the old socket id to the new one.
     for (const meld of room.tableMelds) {
       if (meld.ownerId === oldId) meld.ownerId = socket.id;
     }
 
+    socket.join(roomCode);
+    socket.emit("joinedRoom", { roomCode, playerId: socket.id, playerToken });
     emitRoom(roomCode);
   });
+
 
   socket.on("disconnect", () => {
     for(const [roomCode,room] of Object.entries(rooms)){

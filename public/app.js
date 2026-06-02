@@ -1,18 +1,20 @@
 const socket = io();
 const SESSION_ROOM_KEY = "beanersRoomCode";
 const SESSION_PLAYER_KEY = "beanersPlayerId";
+const SESSION_TOKEN_KEY = "beanersPlayerToken";
 
 socket.on("connect", () => {
   const savedRoom = localStorage.getItem(SESSION_ROOM_KEY);
-  const savedPlayer = localStorage.getItem(SESSION_PLAYER_KEY);
-  if (savedRoom && savedPlayer && !currentRoomCode) {
-    socket.emit("rejoinRoom", { roomCode: savedRoom, playerId: savedPlayer });
+  const savedToken = localStorage.getItem(SESSION_TOKEN_KEY);
+  if (savedRoom && savedToken && !currentRoomCode) {
+    socket.emit("rejoinRoom", { roomCode: savedRoom, playerToken: savedToken });
   }
 });
 
 socket.on("rejoinFailed", () => {
   localStorage.removeItem(SESSION_ROOM_KEY);
   localStorage.removeItem(SESSION_PLAYER_KEY);
+  localStorage.removeItem(SESSION_TOKEN_KEY);
 });
 
 
@@ -28,11 +30,19 @@ let lastShownScoreRound = null;
 let scorecardTimer = null;
 let audioContext = null;
 let lastHandCount = 0;
+let handSortMode = localStorage.getItem('beanersSortMode') || 'none';
 
 const $ = id => document.getElementById(id);
 
-$("createBtn").onclick = () => socket.emit("createRoom", { name: $("nameInput").value.trim() || "Player" });
-$("joinBtn").onclick = () => socket.emit("joinRoom", { roomCode: $("roomInput").value.trim(), name: $("nameInput").value.trim() || "Player" });
+$("createBtn").onclick = () => socket.emit("createRoom", { 
+  name: $("nameInput").value.trim() || "Player",
+  playerToken: localStorage.getItem(SESSION_TOKEN_KEY)
+});
+$("joinBtn").onclick = () => socket.emit("joinRoom", { 
+  roomCode: $("roomInput").value.trim(), 
+  name: $("nameInput").value.trim() || "Player",
+  playerToken: localStorage.getItem(SESSION_TOKEN_KEY)
+});
 $("addBotBtn").onclick = () => socket.emit("addBot", { roomCode: currentRoomCode });
 $("fillBotsBtn").onclick = () => socket.emit("fillBots", { roomCode: currentRoomCode });
 $("spinBtn").onclick = () => socket.emit("spinStarter", { roomCode: currentRoomCode });
@@ -41,6 +51,18 @@ $("drawDeckBtn").onclick = () => socket.emit("drawFromDeck", { roomCode: current
 $("takeTopDiscardBtn").onclick = () => socket.emit("takeTopDiscard", { roomCode: currentRoomCode });
 $("takeAllDiscardBtn").onclick = () => { if(confirm("Pick up the entire discard pile?")) socket.emit("takeAllDiscard", { roomCode: currentRoomCode }); };
 $("nextRoundBtn").onclick = () => socket.emit("nextRound", { roomCode: currentRoomCode });
+
+$("sortNumberBtn").onclick = () => {
+  handSortMode = "number";
+  localStorage.setItem("beanersSortMode", handSortMode);
+  renderHand();
+};
+
+$("sortSuitBtn").onclick = () => {
+  handSortMode = "suit";
+  localStorage.setItem("beanersSortMode", handSortMode);
+  renderHand();
+};
 
 $("layMeldBtn").onclick = () => {
   const ids = [...selectedCardIds];
@@ -63,11 +85,12 @@ $("cancelChoice").onclick = () => {
 
 $("closeScorecard").onclick = () => hideScorecard();
 
-socket.on("joinedRoom", ({roomCode, playerId}) => {
+socket.on("joinedRoom", ({roomCode, playerId, playerToken}) => {
   currentRoomCode = roomCode;
   myPlayerId = playerId;
   localStorage.setItem(SESSION_ROOM_KEY, roomCode);
   localStorage.setItem(SESSION_PLAYER_KEY, playerId);
+  if (playerToken) localStorage.setItem(SESSION_TOKEN_KEY, playerToken);
   $("roomCode").textContent = roomCode;
   $("lobby").classList.add("hidden");
   $("game").classList.remove("hidden");
@@ -170,7 +193,7 @@ function renderPlayers(){
     div.className = "playerRow " + (i === state.currentPlayerIndex && state.phase === "playing" ? "current" : "");
     div.innerHTML = `
       <strong>${i === state.currentPlayerIndex && state.phase === "playing" ? "👉 " : ""}${escapeHtml(p.name)}${p.id === myPlayerId ? " (you)" : ""}</strong>
-      ${p.isBot ? '<span class="botTag">BOT</span>' : ""}
+      ${p.isBot ? '<span class="botTag">BOT</span>' : ""}${p.disconnected ? '<span class="botTag">OFFLINE</span>' : ""}
       <br>Cards: ${p.cardCount}
       <br>${p.isDown ? "Down" : "Not down"}
       <br>Total: ${p.totalScore}${p.lastRoundScore == null ? "" : `<br>Last: ${p.lastRoundScore}`}
@@ -179,11 +202,29 @@ function renderPlayers(){
   });
 }
 
+
+function getSortedHand(){
+  const rankOrder = {"A":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,"J":11,"Q":12,"K":13};
+  const suitOrder = {"♠":1,"♥":2,"♦":3,"♣":4};
+
+  const cards = [...currentHand];
+
+  if(handSortMode === "number"){
+    cards.sort((a,b) => (rankOrder[a.rank] - rankOrder[b.rank]) || (suitOrder[a.suit] - suitOrder[b.suit]));
+  }
+
+  if(handSortMode === "suit"){
+    cards.sort((a,b) => (suitOrder[a.suit] - suitOrder[b.suit]) || (rankOrder[a.rank] - rankOrder[b.rank]));
+  }
+
+  return cards;
+}
+
 function renderHand(){
   const wrap = $("hand");
   if(!wrap) return;
   wrap.innerHTML = "";
-  currentHand.forEach(card => {
+  getSortedHand().forEach(card => {
     const el = document.createElement("div");
     el.className = "card " + cardClasses(card) + (selectedCardIds.has(card.id) ? " selected" : "");
     el.textContent = cardText(card);
@@ -199,6 +240,7 @@ function renderHand(){
       e.dataTransfer.setData("text/plain", card.id);
       e.dataTransfer.effectAllowed = "move";
     };
+    setupTouchDrag(el, card.id);
     wrap.appendChild(el);
   });
 }
@@ -294,6 +336,70 @@ function createMeldElement(meld){
   });
 
   return box;
+}
+
+
+function setupTouchDrag(el, cardId){
+  let ghost = null;
+  let dragging = false;
+  let startX = 0;
+  let startY = 0;
+
+  el.addEventListener("touchstart", e => {
+    if(!e.touches || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    dragging = false;
+  }, {passive:true});
+
+  el.addEventListener("touchmove", e => {
+    if(!e.touches || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = Math.abs(t.clientX - startX);
+    const dy = Math.abs(t.clientY - startY);
+
+    if(!dragging && (dx > 8 || dy > 8)){
+      dragging = true;
+      ghost = el.cloneNode(true);
+      ghost.classList.add("touchGhost");
+      document.body.appendChild(ghost);
+    }
+
+    if(dragging && ghost){
+      e.preventDefault();
+      ghost.style.left = `${t.clientX}px`;
+      ghost.style.top = `${t.clientY}px`;
+
+      document.querySelectorAll(".meld,.discardDrop").forEach(x => x.classList.remove("dragOver"));
+      const target = document.elementFromPoint(t.clientX, t.clientY)?.closest(".meld,.discardDrop");
+      if(target) target.classList.add("dragOver");
+    }
+  }, {passive:false});
+
+  el.addEventListener("touchend", e => {
+    if(!dragging){
+      if(selectedCardIds.has(cardId)) selectedCardIds.delete(cardId);
+      else selectedCardIds.add(cardId);
+      renderHand();
+      return;
+    }
+
+    const touch = e.changedTouches && e.changedTouches[0];
+    if(touch){
+      const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest(".meld,.discardDrop");
+      if(target?.classList.contains("discardDrop")){
+        socket.emit("discardCard", { roomCode: currentRoomCode, cardId });
+      } else if(target?.classList.contains("meld")){
+        playOnMeld(target.dataset.meldId, cardId);
+      }
+    }
+
+    document.querySelectorAll(".meld,.discardDrop").forEach(x => x.classList.remove("dragOver"));
+    if(ghost) ghost.remove();
+    ghost = null;
+    dragging = false;
+  }, {passive:false});
 }
 
 function setupDiscardDrop(){
