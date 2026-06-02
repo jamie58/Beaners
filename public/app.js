@@ -1,108 +1,14 @@
-const socket = io();
-
-let currentRoomCode = null;
-let myPlayerId = null;
-let currentHand = [];
-
-const lobby = document.getElementById("lobby");
-const game = document.getElementById("game");
-const nameInput = document.getElementById("nameInput");
-const roomInput = document.getElementById("roomInput");
-const roomCodeEl = document.getElementById("roomCode");
-const statusEl = document.getElementById("status");
-const playersEl = document.getElementById("players");
-const handEl = document.getElementById("hand");
-const deckCountEl = document.getElementById("deckCount");
-const discardCardEl = document.getElementById("discardCard");
-
-document.getElementById("createBtn").addEventListener("click", () => {
-  socket.emit("createRoom", { name: nameInput.value.trim() || "Player" });
-});
-
-document.getElementById("joinBtn").addEventListener("click", () => {
-  socket.emit("joinRoom", {
-    roomCode: roomInput.value.trim(),
-    name: nameInput.value.trim() || "Player"
-  });
-});
-
-document.getElementById("startBtn").addEventListener("click", () => {
-  socket.emit("startGame", { roomCode: currentRoomCode });
-});
-
-document.getElementById("drawBtn").addEventListener("click", () => {
-  socket.emit("drawCard", { roomCode: currentRoomCode });
-});
-
-document.getElementById("takeDiscardBtn").addEventListener("click", () => {
-  socket.emit("takeDiscard", { roomCode: currentRoomCode });
-});
-
-socket.on("joinedRoom", ({ roomCode, playerId }) => {
-  currentRoomCode = roomCode;
-  myPlayerId = playerId;
-  roomCodeEl.textContent = roomCode;
-  lobby.classList.add("hidden");
-  game.classList.remove("hidden");
-});
-
-socket.on("roomState", (state) => {
-  if (!state) return;
-
-  roomCodeEl.textContent = state.roomCode;
-  deckCountEl.textContent = state.deckCount;
-
-  const me = state.players.find((p) => p.id === myPlayerId);
-  const current = state.players[state.currentPlayerIndex];
-
-  if (!state.started) {
-    statusEl.textContent = "Waiting for players. Share the room code.";
-  } else if (current && current.id === myPlayerId) {
-    statusEl.textContent = "Your turn.";
-  } else {
-    statusEl.textContent = current ? `${current.name}'s turn.` : "";
-  }
-
-  discardCardEl.textContent = state.topDiscard ? `${state.topDiscard.rank}${state.topDiscard.suit}` : "-";
-  discardCardEl.className = "card large " + (state.topDiscard && ["♥", "♦"].includes(state.topDiscard.suit) ? "red" : "");
-
-  playersEl.innerHTML = "";
-  state.players.forEach((player, index) => {
-    const li = document.createElement("li");
-    const marker = index === state.currentPlayerIndex && state.started ? "👉 " : "";
-    const self = player.id === myPlayerId ? " (you)" : "";
-    li.textContent = `${marker}${player.name}${self} — ${player.cardCount} cards`;
-    playersEl.appendChild(li);
-  });
-});
-
-socket.on("yourHand", (hand) => {
-  currentHand = hand;
-  renderHand();
-});
-
-socket.on("errorMessage", (message) => {
-  alert(message);
-});
-
-socket.on("gameOver", (message) => {
-  alert(message);
-  window.location.reload();
-});
-
-function renderHand() {
-  handEl.innerHTML = "";
-
-  currentHand.forEach((card) => {
-    const div = document.createElement("button");
-    div.className = "card " + (["♥", "♦"].includes(card.suit) ? "red" : "");
-    div.textContent = `${card.rank}${card.suit}`;
-    div.addEventListener("click", () => {
-      socket.emit("discardCard", {
-        roomCode: currentRoomCode,
-        cardId: card.id
-      });
-    });
-    handEl.appendChild(div);
-  });
-}
+const socket=io();let currentRoomCode=null,myPlayerId=null,currentHand=[],selectedCardIds=new Set(),latestState=null;const $=id=>document.getElementById(id);
+$("createBtn").addEventListener("click",()=>socket.emit("createRoom",{name:$("nameInput").value.trim()||"Player"}));
+$("joinBtn").addEventListener("click",()=>socket.emit("joinRoom",{roomCode:$("roomInput").value.trim(),name:$("nameInput").value.trim()||"Player"}));
+$("spinBtn").addEventListener("click",()=>socket.emit("spinStarter",{roomCode:currentRoomCode}));$("startBtn").addEventListener("click",()=>socket.emit("startGame",{roomCode:currentRoomCode}));$("drawDeckBtn").addEventListener("click",()=>socket.emit("drawFromDeck",{roomCode:currentRoomCode}));$("takeTopDiscardBtn").addEventListener("click",()=>socket.emit("takeTopDiscard",{roomCode:currentRoomCode}));$("takeAllDiscardBtn").addEventListener("click",()=>{if(confirm("Pick up the entire discard pile?"))socket.emit("takeAllDiscard",{roomCode:currentRoomCode})});
+$("layMeldBtn").addEventListener("click",()=>{const cardIds=[...selectedCardIds];if(cardIds.length<3)return alert("Select at least 3 cards for a meld.");socket.emit("layMeld",{roomCode:currentRoomCode,cardIds});selectedCardIds.clear()});
+$("discardBtn").addEventListener("click",()=>{const cardIds=[...selectedCardIds];if(cardIds.length!==1)return alert("Select exactly 1 card to discard.");socket.emit("discardCard",{roomCode:currentRoomCode,cardId:cardIds[0]});selectedCardIds.clear()});$("nextRoundBtn").addEventListener("click",()=>socket.emit("nextRound",{roomCode:currentRoomCode}));
+socket.on("joinedRoom",({roomCode,playerId})=>{currentRoomCode=roomCode;myPlayerId=playerId;$("roomCode").textContent=roomCode;$("lobby").classList.add("hidden");$("game").classList.remove("hidden")});
+socket.on("starterSpun",({starterName})=>{const result=$("wheelResult"),names=latestState?.players?.map(p=>p.name)||[];let i=0;result.textContent="Spinning...";const interval=setInterval(()=>{if(names.length)result.textContent=names[i++%names.length]},90);setTimeout(()=>{clearInterval(interval);result.textContent=`${starterName} starts Round 1`},1600)});
+socket.on("roomState",state=>{latestState=state;renderState(state)});socket.on("yourHand",hand=>{currentHand=hand;selectedCardIds=new Set([...selectedCardIds].filter(id=>hand.some(c=>c.id===id)));renderHand()});socket.on("errorMessage",message=>alert(message));
+function renderState(state){if(!state)return;$("roomCode").textContent=state.roomCode;$("roundNo").textContent=state.round;$("beanerRank").textContent=state.beaner;$("deckCount").textContent=state.deckCount;$("discardCount").textContent=state.discardCount;const current=state.players[state.currentPlayerIndex];$("lobbyControls").classList.toggle("hidden",state.phase!=="lobby");$("playingControls").classList.toggle("hidden",state.phase!=="playing");$("roundOverControls").classList.toggle("hidden",state.phase!=="roundOver");$("winnerMessage").classList.toggle("hidden",!state.winnerMessage);$("winnerMessage").textContent=state.winnerMessage||"";if(state.phase==="lobby")$("status").textContent="Waiting for 4 players. Share the room code.";else if(state.phase==="playing")$("status").textContent=current?.id===myPlayerId?"Your turn. Pick up, play cards, then discard.":`${current?.name||"Someone"}'s turn. You can still live-play if you're down.`;else if(state.phase==="roundOver")$("status").textContent="Round over. Scores added.";else $("status").textContent="Game over.";const top=state.topDiscard;$("discardCard").textContent=top?`${top.rank}${top.suit}`:"-";$("discardCard").className="card large "+cardClasses(top,state.beaner);renderPlayers(state);renderMelds(state);renderHand()}
+function renderPlayers(state){const c=$("players");c.innerHTML="";state.players.forEach((p,i)=>{const div=document.createElement("div");div.className="playerRow "+(i===state.currentPlayerIndex&&state.phase==="playing"?"current":"");div.innerHTML=`<strong>${i===state.currentPlayerIndex&&state.phase==="playing"?"👉 ":""}${escapeHtml(p.name)}${p.id===myPlayerId?" (you)":""}</strong><br>Cards: ${p.cardCount} | ${p.isDown?"Down":"Not down"} | Total: ${p.totalScore}${p.lastRoundScore===null?"":` | Last round: ${p.lastRoundScore}`}`;c.appendChild(div)})}
+function renderHand(){const h=$("hand");if(!h)return;h.innerHTML="";const beaner=latestState?.beaner;currentHand.forEach(card=>{const b=document.createElement("button");b.className="card "+cardClasses(card,beaner)+(selectedCardIds.has(card.id)?" selected":"");b.textContent=`${card.rank}${card.suit}`;b.addEventListener("click",()=>{selectedCardIds.has(card.id)?selectedCardIds.delete(card.id):selectedCardIds.add(card.id);renderHand()});h.appendChild(b)})}
+function renderMelds(state){const c=$("melds");c.innerHTML="";if(!state.tableMelds.length){c.innerHTML='<p class="hint">No melds on the table yet.</p>';return}state.tableMelds.forEach(m=>{const div=document.createElement("div");div.className="meld";const header=document.createElement("div");header.className="meldHeader";const title=document.createElement("div");title.innerHTML=`<strong>${escapeHtml(m.ownerName)}</strong> - ${m.type.toUpperCase()}`;const add=document.createElement("button");add.textContent="Add Selected";add.addEventListener("click",()=>{const selected=[...selectedCardIds];if(selected.length!==1)return alert("Select exactly 1 card to add.");socket.emit("addToMeld",{roomCode:currentRoomCode,meldId:m.id,cardId:selected[0]});selectedCardIds.clear()});header.appendChild(title);header.appendChild(add);const cards=document.createElement("div");m.cards.forEach(card=>{const s=document.createElement("span");s.className="card "+cardClasses(card,state.beaner);s.textContent=`${card.rank}${card.suit}`;cards.appendChild(s)});div.appendChild(header);div.appendChild(cards);c.appendChild(div)})}
+function cardClasses(card,beaner){if(!card)return"";const out=[];if(["♥","♦"].includes(card.suit))out.push("red");if(card.rank===beaner)out.push("beaner");return out.join(" ")}function escapeHtml(str){return String(str).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
