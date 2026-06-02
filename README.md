@@ -1,12 +1,9 @@
-# Beaners v11
+# Beaners v12
 
 Updates:
-- Sort buttons now sit on the same row as Lay Meld and Discard.
-- Top and bottom meld areas are taller on mobile.
-- Exit Game button added.
-- Exiting a game replaces that player with a bot.
-- Players can only pick up once per turn:
-  - one card from the deck, OR
-  - one card from the top of discard, OR
-  - the entire discard pile.
-- Players must pick up before discarding.
+- When the deck runs out, the game keeps the top discard card face-up, shuffles the rest of the discard pile, flips it over, and uses it as the new deck.
+- Adds a seating chart in the lobby.
+- Each human player can choose a seat: top, left, right, or bottom.
+- Bots automatically take empty seats.
+- Start button renamed to “Let’s Beaners!”.
+- Game requires all 4 players to have seats before starting.

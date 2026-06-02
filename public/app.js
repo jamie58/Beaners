@@ -73,6 +73,13 @@ function doExitGame(){
 if ($("exitGameBtn")) $("exitGameBtn").onclick = doExitGame;
 if ($("exitGameBtn2")) $("exitGameBtn2").onclick = doExitGame;
 
+
+document.querySelectorAll(".seatPick").forEach(btn => {
+  btn.addEventListener("click", () => {
+    socket.emit("chooseSeat", { roomCode: currentRoomCode, seatKey: btn.dataset.seat });
+  });
+});
+
 socket.on("exitedGame", () => {
   localStorage.removeItem(SESSION_ROOM_KEY);
   localStorage.removeItem(SESSION_PLAYER_KEY);
@@ -202,9 +209,34 @@ function renderState(){
     if($(id)) $(id).disabled = disablePickup;
   });
 
+  renderSeatStatus();
   renderPlayers();
   renderMelds();
   renderHand();
+}
+
+
+function renderSeatStatus(){
+  const box = $("seatStatus");
+  if(!box || !latestState) return;
+
+  const labels = {top:"Top", left:"Left", right:"Right", bottom:"Bottom"};
+  const occupied = {};
+  latestState.players.forEach(p => {
+    if(p.seatKey) occupied[p.seatKey] = p.name + (p.id === myPlayerId ? " (you)" : "") + (p.isBot ? " Bot" : "");
+  });
+
+  box.innerHTML = ["top","left","right","bottom"].map(seat => {
+    return `<div><strong>${labels[seat]}:</strong> ${occupied[seat] || "Empty"}</div>`;
+  }).join("");
+
+  document.querySelectorAll(".seatPick").forEach(btn => {
+    const seat = btn.dataset.seat;
+    const takenByOther = latestState.players.some(p => p.seatKey === seat && p.id !== myPlayerId);
+    const takenByMe = latestState.players.some(p => p.seatKey === seat && p.id === myPlayerId);
+    btn.disabled = takenByOther;
+    btn.textContent = takenByMe ? `${labels[seat]} ✓` : `${labels[seat]} Seat`;
+  });
 }
 
 function renderPlayers(){
@@ -279,6 +311,14 @@ function renderSeats(){
   seats.forEach(id => { if($(id)) $(id).innerHTML = ""; });
   if(!state || !state.players) return;
 
+  const bySeat = {
+    top: state.players.find(p => p.seatKey === "top"),
+    left: state.players.find(p => p.seatKey === "left"),
+    right: state.players.find(p => p.seatKey === "right"),
+    bottom: state.players.find(p => p.seatKey === "bottom")
+  };
+
+  // Fallback for older rooms without seats.
   const meIndex = Math.max(0, state.players.findIndex(p => p.id === myPlayerId));
   const ordered = [
     state.players[meIndex],
@@ -288,10 +328,10 @@ function renderSeats(){
   ].filter(Boolean);
 
   const placement = [
-    { player: ordered[2], seat: "seatTop" },
-    { player: ordered[1], seat: "seatLeft" },
-    { player: ordered[3], seat: "seatRight" },
-    { player: ordered[0], seat: "seatBottom" },
+    { player: bySeat.top || ordered[2], seat: "seatTop" },
+    { player: bySeat.left || ordered[1], seat: "seatLeft" },
+    { player: bySeat.right || ordered[3], seat: "seatRight" },
+    { player: bySeat.bottom || ordered[0], seat: "seatBottom" },
   ];
 
   placement.forEach(({player, seat}) => {

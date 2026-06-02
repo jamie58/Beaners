@@ -40,9 +40,19 @@
       <section id="lobbyControls" class="panel">
         <button id="addBotBtn" class="secondary">Add 1 Computer Player</button>
         <button id="fillBotsBtn" class="secondary">Fill Empty Seats With Bots</button>
+        <div class="seatPicker">
+          <h3>Choose your seat</h3>
+          <div class="seatPickGrid">
+            <button class="seatPick" data-seat="top">Top Seat</button>
+            <button class="seatPick" data-seat="left">Left Seat</button>
+            <button class="seatPick" data-seat="right">Right Seat</button>
+            <button class="seatPick" data-seat="bottom">Bottom Seat</button>
+          </div>
+          <div id="seatStatus" class="seatStatus"></div>
+        </div>
         <button id="spinBtn">Spin Starter Wheel</button>
         <div id="wheelResult"></div>
-        <button id="startBtn">Start Game</button>
+        <button id="startBtn">Let’s Beaners!</button>
         <button id="exitGameBtn" class="dangerBtn hidden">Exit Game</button>
       </section>
 

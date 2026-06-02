@@ -20,6 +20,20 @@ function scoreHand(hand, round){ return hand.reduce((a,c)=>a+cardScore(c, round)
 function cleanName(name){ return String(name || "Player").trim().slice(0,20) || "Player"; }
 function shuffle(deck){ for(let i=deck.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [deck[i],deck[j]]=[deck[j],deck[i]]; } return deck; }
 function createDeck(){ const deck=[]; for(const suit of suits){ for(const rank of ranks){ deck.push({rank,suit,id:`${rank}${suit}-${Math.random().toString(36).slice(2,9)}`}); } } return shuffle(deck); }
+
+function recycleDiscardIntoDeck(room){
+  if(room.deck.length > 0) return true;
+
+  // Keep the top discard card face-up, shuffle the rest, flip it over as the new draw deck.
+  if(room.discardPile.length <= 1) return false;
+
+  const topDiscard = room.discardPile.pop();
+  room.deck = shuffle(room.discardPile.splice(0));
+  room.discardPile = [topDiscard];
+
+  return room.deck.length > 0;
+}
+
 function createRoomCode(){ let code; do code = Math.floor(1000 + Math.random()*9000).toString(); while(rooms[code]); return code; }
 function createPlayerToken(){ return "pt-" + Math.random().toString(36).slice(2) + Date.now().toString(36); }
 function rankFromValue(v){ if(v===1 || v===14) return "A"; if(v===11) return "J"; if(v===12) return "Q"; if(v===13) return "K"; return String(v); }
@@ -195,7 +209,7 @@ function publicRoomState(roomCode){
     roundScores: room.roundScores || [],
     players: room.players.map((p,i)=>({
       id:p.id, name:p.name, cardCount:p.hand.length, totalScore:p.totalScore,
-      lastRoundScore:p.lastRoundScore, isDown:p.isDown, isBot:!!p.isBot, disconnected:!!p.disconnected, hasPickedUp:!!p.hasPickedUp, index:i
+      lastRoundScore:p.lastRoundScore, isDown:p.isDown, isBot:!!p.isBot, disconnected:!!p.disconnected, hasPickedUp:!!p.hasPickedUp, seatKey:p.seatKey || null, index:i
     })),
     tableMelds: room.tableMelds.map(m=>({
       id:m.id, ownerId:m.ownerId, ownerName:room.players.find(p=>p.id===m.ownerId)?.name || "Player",
@@ -305,7 +319,7 @@ function runBotTurn(roomCode){
 
   const top = room.discardPile[room.discardPile.length-1];
   if(top && isBeaner(top, room.round)) bot.hand.push(room.discardPile.pop());
-  else if(room.deck.length) bot.hand.push(room.deck.pop());
+  else if(recycleDiscardIntoDeck(room)) bot.hand.push(room.deck.pop());
   else if(room.discardPile.length) bot.hand.push(room.discardPile.pop());
   bot.hasPickedUp = true;
 
@@ -333,14 +347,14 @@ function addBot(room){
   const names=["Bot Barry","Bot Brenda","Bot Bill","Bot Bella"];
   const used=new Set(room.players.map(p=>p.name));
   const name=names.find(n=>!used.has(n)) || `Bot ${room.players.length+1}`;
-  room.players.push({id:`bot-${Math.random().toString(36).slice(2,10)}`, token:createPlayerToken(), name, hand:[], isDown:false, totalScore:0, lastRoundScore:null, isBot:true, disconnected:false, hasPickedUp:false,hasPickedUp:false});
+  room.players.push({id:`bot-${Math.random().toString(36).slice(2,10)}`, token:createPlayerToken(), name, hand:[], isDown:false, totalScore:0, lastRoundScore:null, isBot:true, disconnected:false, hasPickedUp:false,hasPickedUp:false,seatKey:null});
 }
 
 io.on("connection", socket => {
   socket.on("createRoom", ({name, playerToken}) => {
     const roomCode=createRoomCode();
     const token = playerToken || createPlayerToken();
-    rooms[roomCode]={players:[{id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false,hasPickedUp:false,hasPickedUp:false}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:"",roundScores:[]};
+    rooms[roomCode]={players:[{id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false,hasPickedUp:false,hasPickedUp:false,seatKey:null}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:"",roundScores:[]};
     socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token}); emitRoom(roomCode);
   });
 
@@ -364,12 +378,29 @@ io.on("connection", socket => {
 
     if(room.phase!=="lobby") return socket.emit("errorMessage","Game already started.");
     if(room.players.length>=4) return socket.emit("errorMessage","Room is full.");
-    room.players.push({id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false,hasPickedUp:false,hasPickedUp:false});
+    room.players.push({id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false,hasPickedUp:false,hasPickedUp:false,seatKey:null});
     socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token}); emitRoom(roomCode);
   });
 
   socket.on("addBot", ({roomCode})=>{ const room=rooms[roomCode]; if(!room || room.phase!=="lobby") return; if(room.players.length>=4) return; addBot(room); emitRoom(roomCode); });
   socket.on("fillBots", ({roomCode})=>{ const room=rooms[roomCode]; if(!room || room.phase!=="lobby") return; while(room.players.length<4) addBot(room); emitRoom(roomCode); });
+
+
+  socket.on("chooseSeat", ({ roomCode, seatKey }) => {
+    const room = rooms[String(roomCode || "").trim()];
+    if(!room || room.phase !== "lobby") return;
+    const allowed = ["top","left","right","bottom"];
+    if(!allowed.includes(seatKey)) return socket.emit("errorMessage","Invalid seat.");
+
+    const player = room.players.find(p => p.id === socket.id && !p.isBot);
+    if(!player) return;
+
+    const taken = room.players.find(p => p.seatKey === seatKey && p.id !== player.id);
+    if(taken) return socket.emit("errorMessage","That seat is already taken.");
+
+    player.seatKey = seatKey;
+    emitRoom(roomCode);
+  });
 
   socket.on("spinStarter", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="lobby") return;
@@ -383,6 +414,9 @@ io.on("connection", socket => {
   socket.on("startGame", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="lobby") return;
     if(room.players.length!==4) return socket.emit("errorMessage","Need exactly 4 players.");
+    if(room.players.some(p => !p.seatKey)) return socket.emit("errorMessage","Everyone must choose a seat first.");
+    const seatOrder = ["bottom","left","top","right"];
+    room.players.sort((a,b) => seatOrder.indexOf(a.seatKey) - seatOrder.indexOf(b.seatKey));
     room.round=1; room.roundScores=[]; for(const p of room.players){p.totalScore=0; p.lastRoundScore=null;}
     resetRound(room); emitRoom(roomCode); maybeRunBotTurn(roomCode);
   });
@@ -398,7 +432,7 @@ io.on("connection", socket => {
     const current=room.players[room.currentPlayerIndex];
     if(!current || current.id!==socket.id) return socket.emit("errorMessage","Not your turn.");
     if(current.hasPickedUp) return socket.emit("errorMessage","You have already picked up this turn. Play cards, then discard.");
-    if(!room.deck.length) return socket.emit("errorMessage","Deck is empty.");
+    if(!recycleDiscardIntoDeck(room)) return socket.emit("errorMessage","Deck and discard pile are empty.");
     current.hand.push(room.deck.pop());
     current.hasPickedUp = true;
     emitRoom(roomCode);

@@ -852,3 +852,50 @@ button:disabled{
 }
 
 .sortActions{display:none!important;}
+
+
+.seatPicker{
+  background:#fff7ed;
+  border-radius:14px;
+  padding:10px;
+  margin:8px 0;
+}
+
+.seatPicker h3{
+  margin:0 0 8px;
+}
+
+.seatPickGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+}
+
+.seatPickGrid button{
+  margin:0;
+  padding:10px;
+}
+
+.seatStatus{
+  margin-top:8px;
+  font-size:14px;
+  color:#44403c;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:3px 10px;
+}
+
+@media(max-width:850px){
+  .seatPicker{
+    padding:7px;
+  }
+
+  .seatPickGrid button{
+    padding:7px;
+    font-size:12px;
+  }
+
+  .seatStatus{
+    font-size:12px;
+  }
+}
