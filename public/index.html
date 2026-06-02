@@ -14,14 +14,20 @@
       <div id="compactBeaner" class="beanerPill">R1 • Beaner A</div>
     </header>
 
-    <section id="lobby" class="panel lobby">
-      <label>Your name</label>
-      <input id="nameInput" placeholder="Jamie" maxlength="20">
-      <button id="createBtn">Create Room</button>
-      <div class="divider">or</div>
-      <label>Room code</label>
-      <input id="roomInput" placeholder="1234" maxlength="4">
-      <button id="joinBtn">Join Room</button>
+    <section id="lobby" class="panel lobby startScreen">
+      <div class="startLogo"><span>🫘</span> BEANERS <span>♠</span></div>
+      <p class="startHint">Enter your name first, then create a room or join your mates.</p>
+
+      <label>Your player name</label>
+      <input id="nameInput" placeholder="Enter your name" maxlength="20">
+
+      <label>Join code</label>
+      <input id="roomInput" placeholder="Only needed if joining" maxlength="4">
+
+      <div class="startActions">
+        <button id="createBtn">Create Room</button>
+        <button id="joinBtn">Join Room</button>
+      </div>
     </section>
 
     <section id="game" class="hidden">

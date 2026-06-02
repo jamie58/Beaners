@@ -1410,3 +1410,107 @@ body{
     min-height:34px;
   }
 }
+
+
+/* v18 discard visibility + polished start screen */
+.startScreen{
+  max-width:480px;
+  margin:0 auto 12px;
+}
+
+.startLogo{
+  height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin-bottom:8px;
+  border-radius:999px;
+  color:#fff7ed;
+  font-weight:1000;
+  font-size:22px;
+  letter-spacing:1.4px;
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.04)),
+    linear-gradient(135deg,#4b2e19,#1c1917);
+  border:1px solid rgba(251,191,36,.7);
+  box-shadow:0 5px 20px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.08);
+  text-shadow:0 2px 0 rgba(0,0,0,.45);
+}
+
+.startHint{
+  text-align:center;
+  color:#57534e;
+  margin:0 0 12px;
+}
+
+.startActions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:8px;
+}
+
+.startActions button{
+  margin:0;
+}
+
+/* Force the discard face card above the fake stack */
+.discardPile{
+  overflow:visible !important;
+  isolation:isolate;
+}
+
+.discardPile:before,
+.discardPile:after{
+  z-index:0 !important;
+  pointer-events:none;
+}
+
+.discardPile .discardButton,
+#takeTopDiscardBtn{
+  position:relative !important;
+  z-index:5 !important;
+  background:linear-gradient(180deg,#ffffff,#f5f5f4) !important;
+  color:#1c1917;
+  opacity:1 !important;
+  visibility:visible !important;
+}
+
+#takeTopDiscardBtn.red{
+  color:#b91c1c !important;
+}
+
+#takeTopDiscardBtn.beaner{
+  border-color:#b91c1c !important;
+}
+
+.discardPile .pileLabel,
+.discardPile .miniBtn{
+  position:relative;
+  z-index:6;
+}
+
+@media(max-width:850px){
+  .startScreen{
+    margin-top:10px;
+  }
+
+  .startLogo{
+    height:38px;
+    font-size:18px;
+  }
+
+  .startHint{
+    font-size:13px;
+  }
+
+  .startActions{
+    gap:6px;
+  }
+
+  .startActions button{
+    padding:11px 8px;
+    font-size:15px;
+  }
+}
