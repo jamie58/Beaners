@@ -1344,3 +1344,69 @@ body{
     font-size:8.5px;
   }
 }
+
+
+/* v16 clear join code */
+.copyRoomBtn{
+  border:1px solid rgba(255,255,255,.22);
+  width:auto;
+  margin:0;
+  cursor:pointer;
+}
+
+.joinCodePanel{
+  text-align:center;
+  background:#fef3c7;
+  border:1px solid rgba(75,46,25,.16);
+  border-radius:14px;
+  padding:10px;
+  margin-bottom:8px;
+}
+
+.joinCodePanel strong{
+  display:block;
+  font-size:34px;
+  letter-spacing:4px;
+  margin:4px 0 6px;
+  color:#4b2e19;
+}
+
+.joinCodePanel button{
+  margin:0;
+}
+
+@media(max-width:850px){
+  .copyRoomBtn{
+    font-size:10px;
+    padding:4px 6px;
+  }
+
+  .joinCodePanel{
+    padding:7px;
+  }
+
+  .joinCodePanel strong{
+    font-size:26px;
+    letter-spacing:3px;
+  }
+}
+
+
+/* v17 seat claiming / join clarity */
+.seatPick:not(:disabled){
+  cursor:pointer;
+}
+
+.seatPick:disabled{
+  opacity:.45;
+}
+
+.seatPick{
+  min-height:42px;
+}
+
+@media(max-width:850px){
+  .seatPick{
+    min-height:34px;
+  }
+}

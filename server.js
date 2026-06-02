@@ -381,7 +381,7 @@ io.on("connection", socket => {
   });
 
   socket.on("joinRoom", ({roomCode,name,playerToken}) => {
-    roomCode=String(roomCode||"").trim(); const room=rooms[roomCode];
+    roomCode=String(roomCode||"").replace(/\D/g, "").trim(); const room=rooms[roomCode];
     if(!room) return socket.emit("errorMessage","Room not found.");
 
     const token = playerToken || createPlayerToken();
@@ -422,7 +422,8 @@ io.on("connection", socket => {
 
 
   socket.on("chooseSeat", ({ roomCode, seatKey }) => {
-    const room = rooms[String(roomCode || "").trim()];
+    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
+    const room = rooms[roomCode];
     if(!room || room.phase !== "lobby") return;
     const allowed = ["top","left","right","bottom"];
     if(!allowed.includes(seatKey)) return socket.emit("errorMessage","Invalid seat.");
@@ -431,7 +432,14 @@ io.on("connection", socket => {
     if(!player) return;
 
     const taken = room.players.find(p => p.seatKey === seatKey && p.id !== player.id);
-    if(taken) return socket.emit("errorMessage","That seat is already taken.");
+
+    // If a bot is sitting there, let the real player claim the seat and remove the bot.
+    if(taken && taken.isBot){
+      const botIndex = room.players.findIndex(p => p.id === taken.id);
+      if(botIndex !== -1) room.players.splice(botIndex, 1);
+    } else if(taken) {
+      return socket.emit("errorMessage","That seat is already taken by another player.");
+    }
 
     player.seatKey = seatKey;
     emitRoom(roomCode);
@@ -562,8 +570,13 @@ io.on("connection", socket => {
   });
 
 
+  socket.on("checkRoom", ({ roomCode }) => {
+    const code = String(roomCode || "").replace(/\D/g, "").trim();
+    socket.emit("roomCheckResult", { roomCode: code, exists: !!rooms[code] });
+  });
+
   socket.on("rejoinRoom", ({ roomCode, playerToken }) => {
-    roomCode = String(roomCode || "").trim();
+    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
     const room = rooms[roomCode];
     if (!room || !playerToken) {
       socket.emit("rejoinFailed");

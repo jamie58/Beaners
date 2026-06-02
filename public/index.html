@@ -9,9 +9,9 @@
 <body>
   <main>
     <header class="appBar">
-      <div id="compactRoom" class="roomPill">Room ----</div>
+      <button id="copyRoomBtn" class="roomPill copyRoomBtn">JOIN CODE: ----</button>
       <div class="beanersLogo"><span>🫘</span> BEANERS <span>♠</span></div>
-      <div id="compactBeaner" class="beanerPill">Beaner: A</div>
+      <div id="compactBeaner" class="beanerPill">R1 • Beaner A</div>
     </header>
 
     <section id="lobby" class="panel lobby">
@@ -39,6 +39,11 @@
       <div id="winnerMessage" class="winner hidden"></div>
 
       <section id="lobbyControls" class="panel">
+        <div class="joinCodePanel">
+          <div>Tell other players to enter:</div>
+          <strong id="bigJoinCode">----</strong>
+          <button id="copyRoomBtn2" class="secondary">Copy Join Code</button>
+        </div>
         <button id="addBotBtn" class="secondary">Add 1 Bot</button>
         <button id="fillBotsBtn" class="secondary">Fill Empty Seats With Bots</button>
         <p class="hint">You can start with 2–4 players. Bots are optional.</p>

@@ -39,7 +39,7 @@ $("createBtn").onclick = () => socket.emit("createRoom", {
   playerToken: localStorage.getItem(SESSION_TOKEN_KEY)
 });
 $("joinBtn").onclick = () => socket.emit("joinRoom", { 
-  roomCode: $("roomInput").value.trim(), 
+  roomCode: $("roomInput").value.replace(/\D/g, "").trim(), 
   name: $("nameInput").value.trim() || "Player",
   playerToken: localStorage.getItem(SESSION_TOKEN_KEY)
 });
@@ -79,6 +79,26 @@ document.querySelectorAll(".seatPick").forEach(btn => {
     socket.emit("chooseSeat", { roomCode: currentRoomCode, seatKey: btn.dataset.seat });
   });
 });
+
+
+function copyJoinCode(){
+  if(!currentRoomCode) return;
+  navigator.clipboard?.writeText(currentRoomCode).then(() => {
+    alert(`Join code copied: ${currentRoomCode}`);
+  }).catch(() => {
+    prompt("Copy this join code:", currentRoomCode);
+  });
+}
+
+if ($("copyRoomBtn")) $("copyRoomBtn").onclick = copyJoinCode;
+if ($("copyRoomBtn2")) $("copyRoomBtn2").onclick = copyJoinCode;
+
+if ($("roomInput")) {
+  $("roomInput").addEventListener("input", () => {
+    $("roomInput").value = $("roomInput").value.replace(/\D/g, "").slice(0, 4);
+  });
+}
+
 
 socket.on("exitedGame", () => {
   localStorage.removeItem(SESSION_ROOM_KEY);
@@ -173,14 +193,21 @@ socket.on("chooseMeldForCard", ({cardId, meldIds}) => {
 });
 
 socket.on("autoPlayResolved", ({cardId, meldId}) => playOnMeld(meldId, cardId));
-socket.on("errorMessage", message => alert(message));
+socket.on("errorMessage", message => {
+  if(message === "Room not found."){
+    alert("Room not found. Check the 4-digit JOIN CODE, and make sure everyone is using the same Render link. If the host's free Render server restarted, create a new room.");
+  } else {
+    alert(message);
+  }
+});
 
 function renderState(){
   const state = latestState;
   if(!state) return;
 
-  if ($("compactRoom")) $("compactRoom").textContent = `Room ${state.roomCode}`;
-  if ($("compactBeaner")) $("compactBeaner").textContent = `R${state.round} Beaner: ${state.beaner}`;
+  if ($("copyRoomBtn")) $("copyRoomBtn").textContent = `JOIN CODE: ${state.roomCode}`;
+  if ($("bigJoinCode")) $("bigJoinCode").textContent = state.roomCode;
+  if ($("compactBeaner")) $("compactBeaner").textContent = `R${state.round} • Beaner ${state.beaner}`;
   $("roundNo").textContent = state.round;
   $("beanerRank").textContent = state.beaner;
   $("deckCount").textContent = state.deckCount;
@@ -232,10 +259,15 @@ function renderSeatStatus(){
 
   document.querySelectorAll(".seatPick").forEach(btn => {
     const seat = btn.dataset.seat;
-    const takenByOther = latestState.players.some(p => p.seatKey === seat && p.id !== myPlayerId);
-    const takenByMe = latestState.players.some(p => p.seatKey === seat && p.id === myPlayerId);
-    btn.disabled = takenByOther;
-    btn.textContent = takenByMe ? `${labels[seat]} ✓` : `${labels[seat]} Seat`;
+    const occupant = latestState.players.find(p => p.seatKey === seat);
+    const takenByMe = occupant?.id === myPlayerId;
+    const takenByHumanOther = occupant && !occupant.isBot && occupant.id !== myPlayerId;
+    const takenByBot = occupant?.isBot;
+
+    btn.disabled = !!takenByHumanOther;
+    if(takenByMe) btn.textContent = `${labels[seat]} ✓`;
+    else if(takenByBot) btn.textContent = `Claim ${labels[seat]} Bot`;
+    else btn.textContent = `${labels[seat]} Seat`;
   });
 }
 
