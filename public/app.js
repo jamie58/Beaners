@@ -387,7 +387,7 @@ function ensureTimerRenderer(){
       const current = latestState.players?.[latestState.currentPlayerIndex];
       if(current?.id === myPlayerId && latestState.turnStartedAt){
         const elapsed = Date.now() - latestState.turnStartedAt;
-        const stage = elapsed >= 25000 ? 2 : elapsed >= 15000 ? 1 : 0;
+        const stage = elapsed >= 40000 ? 2 : elapsed >= 25000 ? 1 : 0;
         if(stage !== lastWarningStage){
           if(stage === 1){ playSound("warning"); vibrate([30,60,30]); }
           if(stage === 2){ playSound("urgent"); vibrate([60,60,60]); }
@@ -544,8 +544,8 @@ function renderSeats(){
     if(player.index === state.currentPlayerIndex && state.phase === "playing") {
       box.classList.add("current");
       const elapsed = state.turnStartedAt ? Date.now() - state.turnStartedAt : 0;
-      if(elapsed >= 25000) box.classList.add("turnRed");
-      else if(elapsed >= 15000) box.classList.add("turnOrange");
+      if(elapsed >= 40000) box.classList.add("turnRed");
+      else if(elapsed >= 25000) box.classList.add("turnOrange");
     }
     if(player.id === myPlayerId) box.classList.add("you");
 

@@ -1,12 +1,10 @@
-# Beaners v20
+# Beaners v21
 
-Adds:
-- generated placeholder audio files in /public/audio
-- sound toggle button
-- sound/haptics options on start screen
-- haptics for pickup, discard, meld, turn, warnings, Beaners
-- sounds for pickup, discard, meld, shuffle/deal, turn, warnings, Beaners, scorecard
-- mobile audio unlock helper
-
-Note:
-The generated sounds are simple placeholders. Replace the WAV files in public/audio with better assets later using the same filenames.
+Updates:
+- Turn warning changes to orange after 25 seconds.
+- Turn warning changes to red after 40 seconds.
+- Adds PWA/home-screen icon assets:
+  - public/icons/icon-192.png
+  - public/icons/icon-512.png
+  - public/icons/apple-touch-icon.png
+- Adds manifest.webmanifest and mobile app metadata.
