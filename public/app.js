@@ -141,6 +141,12 @@ if ($("exitGameBtn")) $("exitGameBtn").onclick = doExitGame;
 if ($("exitGameBtn2")) $("exitGameBtn2").onclick = doExitGame;
 if ($("exitXBtn")) $("exitXBtn").onclick = doExitGame;
 
+if ($("restartGameBtn")) $("restartGameBtn").onclick = () => {
+  if(confirm("Restart this game and return everyone to the lobby?")){
+    socket.emit("restartGame", { roomCode: currentRoomCode });
+  }
+};
+
 
 document.querySelectorAll(".seatPick").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -227,6 +233,7 @@ socket.on("joinedRoom", ({roomCode, playerId, playerToken}) => {
   $("lobby").classList.add("hidden");
   $("game").classList.remove("hidden");
   if($("exitXBtn")) $("exitXBtn").classList.remove("hidden");
+  if($("restartGameBtn")) $("restartGameBtn").classList.remove("hidden");
   setupDiscardDrop();
 });
 
@@ -804,6 +811,7 @@ function showScorecard(state){
 
   content.innerHTML = html;
   modal.classList.remove("hidden");
+  document.body.classList.add("scorecardOpen");
 
   if(scorecardTimer) clearTimeout(scorecardTimer);
   startScorecardCountdown(15);
@@ -828,6 +836,7 @@ function startScorecardCountdown(seconds){
 function hideScorecard(){
   const modal = $("scorecardModal");
   if(modal) modal.classList.add("hidden");
+  document.body.classList.remove("scorecardOpen");
   if(scorecardTimer) clearTimeout(scorecardTimer);
   scorecardTimer = null;
 }

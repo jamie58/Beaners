@@ -1,9 +1,7 @@
-# Beaners v23
+# Beaners v24
 
 Updates:
-- Replaces app icons with the supplied Beaners artwork.
-- Deck draw area widened within the centre gap.
-- Discard preview text/symbols reduced so the previous 8 cards fit better.
-- Discard preview cards are coloured by suit.
-- Scorecard stays visible for 15 seconds.
-- After the 15-second scorecard, the next round starts automatically.
+- Adds restart game icon back to the top-left bar.
+- Restart returns everyone to the lobby and clears the current game state.
+- Makes the discard pile area slightly smaller to reduce overlap with side seats.
+- Scorecard modal now sits above the hand/actions area at round end.

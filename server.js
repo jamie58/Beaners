@@ -723,6 +723,37 @@ io.on("connection", socket => {
 
 
 
+
+  socket.on("restartGame", ({ roomCode }) => {
+    const room = rooms[String(roomCode || "").replace(/\D/g, "").trim()];
+    if(!room) return;
+
+    if(room.autoNextRoundTimer) clearTimeout(room.autoNextRoundTimer);
+
+    room.phase = "lobby";
+    room.round = 1;
+    room.roundScores = [];
+    room.deck = [];
+    room.discardPile = [];
+    room.tableMelds = [];
+    room.winnerMessage = "";
+    room.turnStartedAt = null;
+    room.currentPlayerIndex = 0;
+    room.starterIndex = 0;
+
+    for(const p of room.players){
+      p.hand = [];
+      p.isDown = false;
+      p.totalScore = 0;
+      p.lastRoundScore = null;
+      p.hasPickedUp = false;
+      p.turnTimeTotalMs = 0;
+      p.turnCount = 0;
+    }
+
+    emitRoom(roomCode);
+  });
+
   socket.on("exitGame", ({ roomCode }) => {
     const room = rooms[String(roomCode || "").trim()];
     if(!room) return;
