@@ -1,11 +1,10 @@
-# Beaners v13
+# Beaners v14
 
-Updates:
-- Game can start with 2, 3, or 4 players.
-- Bots are optional.
-- Add 1 Bot assigns the bot to an empty seat.
-- Fill Empty Seats With Bots fills the remaining seats up to 4.
-- Let’s Beaners! only requires:
-  - at least 2 players total
-  - no more than 4 players
-  - every current player/bot has chosen or been assigned a seat.
+Polished app layout:
+- slick compact Beaners logo bar
+- room number top-left
+- Beaner round top-right
+- vertical deck/discard pile in the centre gap
+- relative seating: every player sees their own hand/meld area at the bottom
+- other players appear relative to where they sit at the table
+- more app-like table styling and card polish

@@ -311,28 +311,42 @@ function renderSeats(){
   seats.forEach(id => { if($(id)) $(id).innerHTML = ""; });
   if(!state || !state.players) return;
 
-  const bySeat = {
-    top: state.players.find(p => p.seatKey === "top"),
-    left: state.players.find(p => p.seatKey === "left"),
-    right: state.players.find(p => p.seatKey === "right"),
-    bottom: state.players.find(p => p.seatKey === "bottom")
-  };
+  const seatOrder = ["bottom", "left", "top", "right"];
+  const me = state.players.find(p => p.id === myPlayerId) || state.players[0];
+  const mySeat = me?.seatKey || "bottom";
+  const mySeatIndex = seatOrder.indexOf(mySeat);
+
+  function relativeSeatFor(player){
+    if(!player?.seatKey || mySeatIndex < 0) return null;
+    const diff = (seatOrder.indexOf(player.seatKey) - mySeatIndex + 4) % 4;
+    if(diff === 0) return "seatBottom";
+    if(diff === 1) return "seatLeft";
+    if(diff === 2) return "seatTop";
+    if(diff === 3) return "seatRight";
+    return null;
+  }
+
+  const placement = state.players.map(player => ({
+    player,
+    seat: relativeSeatFor(player)
+  })).filter(x => x.seat);
 
   // Fallback for older rooms without seats.
-  const meIndex = Math.max(0, state.players.findIndex(p => p.id === myPlayerId));
-  const ordered = [
-    state.players[meIndex],
-    state.players[(meIndex + 1) % state.players.length],
-    state.players[(meIndex + 2) % state.players.length],
-    state.players[(meIndex + 3) % state.players.length],
-  ].filter(Boolean);
-
-  const placement = [
-    { player: bySeat.top || ordered[2], seat: "seatTop" },
-    { player: bySeat.left || ordered[1], seat: "seatLeft" },
-    { player: bySeat.right || ordered[3], seat: "seatRight" },
-    { player: bySeat.bottom || ordered[0], seat: "seatBottom" },
-  ];
+  if(!placement.length){
+    const meIndex = Math.max(0, state.players.findIndex(p => p.id === myPlayerId));
+    const ordered = [
+      state.players[meIndex],
+      state.players[(meIndex + 1) % state.players.length],
+      state.players[(meIndex + 2) % state.players.length],
+      state.players[(meIndex + 3) % state.players.length],
+    ].filter(Boolean);
+    placement.push(
+      { player: ordered[2], seat: "seatTop" },
+      { player: ordered[1], seat: "seatLeft" },
+      { player: ordered[3], seat: "seatRight" },
+      { player: ordered[0], seat: "seatBottom" },
+    );
+  }
 
   placement.forEach(({player, seat}) => {
     if(!player || !$(seat)) return;

@@ -8,9 +8,10 @@
 </head>
 <body>
   <main>
-    <header class="title compactTitle">
-      <div id="compactRoom">Room ----</div>
-      <div id="compactBeaner">Beaner: A</div>
+    <header class="appBar">
+      <div id="compactRoom" class="roomPill">Room ----</div>
+      <div class="beanersLogo"><span>🫘</span> BEANERS <span>♠</span></div>
+      <div id="compactBeaner" class="beanerPill">Beaner: A</div>
     </header>
 
     <section id="lobby" class="panel lobby">
@@ -65,17 +66,15 @@
             <div id="seatRight" class="seat seatRight"></div>
             <div id="seatBottom" class="seat seatBottom"></div>
 
-            <div class="centerPiles">
-              <div class="pile">
-                <h4>Deck</h4>
-                <button id="drawDeckBtn" class="card back drawCardButton">?</button>
-                <small><span id="deckCount">0</span> left</small>
+            <div class="centerPiles verticalPiles">
+              <div class="pile deckPile">
+                <button id="drawDeckBtn" class="card back drawCardButton">🂠</button>
+                <small>Deck • <span id="deckCount">0</span></small>
               </div>
 
-              <div id="discardDropZone" class="pile discardDrop">
-                <h4>Discard</h4>
+              <div id="discardDropZone" class="pile discardDrop discardPile">
                 <button id="takeTopDiscardBtn" class="card large discardButton">-</button>
-                <small><span id="discardCount">0</span> cards</small>
+                <small>Discard • <span id="discardCount">0</span></small>
                 <button id="takeAllDiscardBtn" class="miniBtn">Take pile</button>
               </div>
             </div>
