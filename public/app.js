@@ -193,7 +193,7 @@ function renderState(){
   $("winnerMessage").textContent = state.winnerMessage || "";
 
   const current = state.players[state.currentPlayerIndex];
-  if(state.phase === "lobby") $("status").textContent = "Waiting for 4 players. Add bots if testing solo.";
+  if(state.phase === "lobby") $("status").textContent = "Waiting for players. Start with 2–4 players; bots are optional.";
   else if(state.phase === "playing") $("status").textContent = current?.id === myPlayerId ? "Your turn. Pick up, play, then discard." : `${current?.name}'s turn. You can still live-play if you're down.`;
   else if(state.phase === "roundOver") $("status").textContent = "Round over. Scores added.";
   else $("status").textContent = "Game over.";

@@ -1,9 +1,11 @@
-# Beaners v12
+# Beaners v13
 
 Updates:
-- When the deck runs out, the game keeps the top discard card face-up, shuffles the rest of the discard pile, flips it over, and uses it as the new deck.
-- Adds a seating chart in the lobby.
-- Each human player can choose a seat: top, left, right, or bottom.
-- Bots automatically take empty seats.
-- Start button renamed to “Let’s Beaners!”.
-- Game requires all 4 players to have seats before starting.
+- Game can start with 2, 3, or 4 players.
+- Bots are optional.
+- Add 1 Bot assigns the bot to an empty seat.
+- Fill Empty Seats With Bots fills the remaining seats up to 4.
+- Let’s Beaners! only requires:
+  - at least 2 players total
+  - no more than 4 players
+  - every current player/bot has chosen or been assigned a seat.

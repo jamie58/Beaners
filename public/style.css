@@ -899,3 +899,10 @@ button:disabled{
     font-size:12px;
   }
 }
+
+
+/* v13 optional bots / 2-player start */
+#lobbyControls .hint{
+  text-align:center;
+  margin:4px 0 8px;
+}

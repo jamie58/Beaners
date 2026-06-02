@@ -347,8 +347,30 @@ function addBot(room){
   const names=["Bot Barry","Bot Brenda","Bot Bill","Bot Bella"];
   const used=new Set(room.players.map(p=>p.name));
   const name=names.find(n=>!used.has(n)) || `Bot ${room.players.length+1}`;
-  room.players.push({id:`bot-${Math.random().toString(36).slice(2,10)}`, token:createPlayerToken(), name, hand:[], isDown:false, totalScore:0, lastRoundScore:null, isBot:true, disconnected:false, hasPickedUp:false,hasPickedUp:false,seatKey:null});
+
+  const seats = ["top","left","right","bottom"];
+  const usedSeats = new Set(room.players.map(p => p.seatKey).filter(Boolean));
+  const seatKey = seats.find(s => !usedSeats.has(s)) || null;
+
+  if(!seatKey) return false;
+
+  room.players.push({
+    id:`bot-${Math.random().toString(36).slice(2,10)}`,
+    token:createPlayerToken(),
+    name,
+    hand:[],
+    isDown:false,
+    totalScore:0,
+    lastRoundScore:null,
+    isBot:true,
+    disconnected:false,
+    hasPickedUp:false,
+    seatKey
+  });
+
+  return true;
 }
+
 
 io.on("connection", socket => {
   socket.on("createRoom", ({name, playerToken}) => {
@@ -382,8 +404,21 @@ io.on("connection", socket => {
     socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token}); emitRoom(roomCode);
   });
 
-  socket.on("addBot", ({roomCode})=>{ const room=rooms[roomCode]; if(!room || room.phase!=="lobby") return; if(room.players.length>=4) return; addBot(room); emitRoom(roomCode); });
-  socket.on("fillBots", ({roomCode})=>{ const room=rooms[roomCode]; if(!room || room.phase!=="lobby") return; while(room.players.length<4) addBot(room); emitRoom(roomCode); });
+  socket.on("addBot", ({roomCode})=>{
+    const room=rooms[roomCode];
+    if(!room || room.phase!=="lobby") return;
+    if(room.players.length>=4) return socket.emit("errorMessage","Room is already full.");
+    if(!addBot(room)) return socket.emit("errorMessage","No empty seats available.");
+    emitRoom(roomCode);
+  });
+  socket.on("fillBots", ({roomCode})=>{
+    const room=rooms[roomCode];
+    if(!room || room.phase!=="lobby") return;
+    while(room.players.length<4){
+      if(!addBot(room)) break;
+    }
+    emitRoom(roomCode);
+  });
 
 
   socket.on("chooseSeat", ({ roomCode, seatKey }) => {
@@ -404,7 +439,7 @@ io.on("connection", socket => {
 
   socket.on("spinStarter", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="lobby") return;
-    if(room.players.length!==4) return socket.emit("errorMessage","Need exactly 4 players.");
+    if(room.players.length < 2) return socket.emit("errorMessage","Need at least 2 players.");
     room.starterIndex=Math.floor(Math.random()*room.players.length);
     room.currentPlayerIndex=room.starterIndex;
     io.to(roomCode).emit("starterSpun",{starterName:room.players[room.starterIndex].name});
@@ -413,7 +448,8 @@ io.on("connection", socket => {
 
   socket.on("startGame", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="lobby") return;
-    if(room.players.length!==4) return socket.emit("errorMessage","Need exactly 4 players.");
+    if(room.players.length < 2) return socket.emit("errorMessage","Need at least 2 players.");
+    if(room.players.length > 4) return socket.emit("errorMessage","Maximum 4 players.");
     if(room.players.some(p => !p.seatKey)) return socket.emit("errorMessage","Everyone must choose a seat first.");
     const seatOrder = ["bottom","left","top","right"];
     room.players.sort((a,b) => seatOrder.indexOf(a.seatKey) - seatOrder.indexOf(b.seatKey));
