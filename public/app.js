@@ -64,6 +64,22 @@ $("sortSuitBtn").onclick = () => {
   renderHand();
 };
 
+function doExitGame(){
+  if(confirm("Exit game? A bot will take over your seat.")){
+    socket.emit("exitGame", { roomCode: currentRoomCode });
+  }
+}
+
+if ($("exitGameBtn")) $("exitGameBtn").onclick = doExitGame;
+if ($("exitGameBtn2")) $("exitGameBtn2").onclick = doExitGame;
+
+socket.on("exitedGame", () => {
+  localStorage.removeItem(SESSION_ROOM_KEY);
+  localStorage.removeItem(SESSION_PLAYER_KEY);
+  localStorage.removeItem(SESSION_TOKEN_KEY);
+  location.reload();
+});
+
 $("layMeldBtn").onclick = () => {
   const ids = [...selectedCardIds];
   if(ids.length < 3) return alert("Select at least 3 cards for a meld.");
@@ -178,6 +194,13 @@ function renderState(){
   const top = state.topDiscard;
   $("takeTopDiscardBtn").textContent = top ? cardText(top) : "-";
   $("takeTopDiscardBtn").className = "card large discardButton " + cardClasses(top);
+
+  const me = state.players.find(p => p.id === myPlayerId);
+  const isMyTurn = current?.id === myPlayerId;
+  const disablePickup = !isMyTurn || !!me?.hasPickedUp;
+  ["drawDeckBtn","takeTopDiscardBtn","takeAllDiscardBtn"].forEach(id => {
+    if($(id)) $(id).disabled = disablePickup;
+  });
 
   renderPlayers();
   renderMelds();

@@ -766,3 +766,89 @@ label{font-weight:bold;display:block;margin:8px 0 4px}input,button{width:100%;pa
     border-radius:8px;
   }
 }
+
+
+.dangerBtn{
+  background:#991b1b;
+}
+
+.fourActions{
+  grid-template-columns:1.15fr 1.05fr .8fr .8fr;
+  align-items:stretch;
+}
+
+.fourActions button{
+  height:42px;
+  padding:6px;
+}
+
+.fourActions .smallAction{
+  font-size:12px;
+}
+
+button:disabled{
+  opacity:.45;
+  filter:grayscale(1);
+}
+
+@media(max-width:850px){
+  .fourActions{
+    grid-template-columns:1.15fr 1.05fr .75fr .75fr;
+    gap:4px;
+  }
+
+  .fourActions button{
+    height:34px;
+    padding:4px;
+    font-size:11px;
+  }
+
+  .fourActions .smallAction{
+    font-size:10px;
+  }
+
+  #exitGameBtn2{
+    padding:5px;
+    font-size:11px;
+    margin-top:3px;
+    border-radius:8px;
+  }
+
+  .seatTop{
+    height:106px;
+  }
+
+  .seatBottom{
+    height:116px;
+  }
+
+  .seatLeft,.seatRight{
+    top:114px;
+    bottom:124px;
+  }
+
+  #playingControls{
+    height:calc(100dvh - 170px);
+  }
+}
+
+@media(max-width:430px){
+  .seatTop{
+    height:100px;
+  }
+
+  .seatBottom{
+    height:108px;
+  }
+
+  .seatLeft,.seatRight{
+    top:108px;
+    bottom:116px;
+  }
+
+  #playingControls{
+    height:calc(100dvh - 164px);
+  }
+}
+
+.sortActions{display:none!important;}

@@ -43,6 +43,7 @@
         <button id="spinBtn">Spin Starter Wheel</button>
         <div id="wheelResult"></div>
         <button id="startBtn">Start Game</button>
+        <button id="exitGameBtn" class="dangerBtn hidden">Exit Game</button>
       </section>
 
       <section id="playingControls" class="hidden">
@@ -81,15 +82,14 @@
       <section class="panel handPanel">
         <h3>Your Hand</h3>
         <p class="hint">Tap to select. Drag to a meld or discard pile. Double-click to auto-play.</p>
-        <div class="sortActions">
-          <button id="sortNumberBtn" type="button">Sort by Number</button>
-          <button id="sortSuitBtn" type="button">Sort by Suit</button>
-        </div>
         <div id="hand" class="hand"></div>
-        <div class="actions">
-          <button id="layMeldBtn">Lay Selected Meld</button>
-          <button id="discardBtn">Discard Selected Card</button>
+        <div class="actions fourActions">
+          <button id="layMeldBtn">Lay Meld</button>
+          <button id="discardBtn">Discard</button>
+          <button id="sortNumberBtn" type="button" class="secondary smallAction">Sort No.</button>
+          <button id="sortSuitBtn" type="button" class="secondary smallAction">Sort Suit</button>
         </div>
+        <button id="exitGameBtn2" class="dangerBtn">Exit Game</button>
       </section>
 
       <section class="panel">

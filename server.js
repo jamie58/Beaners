@@ -195,7 +195,7 @@ function publicRoomState(roomCode){
     roundScores: room.roundScores || [],
     players: room.players.map((p,i)=>({
       id:p.id, name:p.name, cardCount:p.hand.length, totalScore:p.totalScore,
-      lastRoundScore:p.lastRoundScore, isDown:p.isDown, isBot:!!p.isBot, disconnected:!!p.disconnected, index:i
+      lastRoundScore:p.lastRoundScore, isDown:p.isDown, isBot:!!p.isBot, disconnected:!!p.disconnected, hasPickedUp:!!p.hasPickedUp, index:i
     })),
     tableMelds: room.tableMelds.map(m=>({
       id:m.id, ownerId:m.ownerId, ownerName:room.players.find(p=>p.id===m.ownerId)?.name || "Player",
@@ -214,7 +214,7 @@ function resetRound(room){
   room.deck=createDeck(); room.discardPile=[]; room.tableMelds=[]; room.phase="playing"; room.winnerMessage="";
   room.currentPlayerIndex = room.starterIndex;
   for(const p of room.players){
-    p.hand=[]; p.isDown=false; p.lastRoundScore=null;
+    p.hand=[]; p.isDown=false; p.lastRoundScore=null; p.hasPickedUp=false;
     for(let i=0;i<7;i++) p.hand.push(room.deck.pop());
   }
   room.discardPile.push(room.deck.pop());
@@ -307,6 +307,7 @@ function runBotTurn(roomCode){
   if(top && isBeaner(top, room.round)) bot.hand.push(room.discardPile.pop());
   else if(room.deck.length) bot.hand.push(room.deck.pop());
   else if(room.discardPile.length) bot.hand.push(room.discardPile.pop());
+  bot.hasPickedUp = true;
 
   let changed=true, safety=0;
   while(changed && safety<8){ changed=false; safety++; if(botTryLay(room,bot)) changed=true; if(botTryAdd(room,bot)) changed=true; }
@@ -321,7 +322,9 @@ function runBotTurn(roomCode){
   }
   if(bot.hand.length === 0){ endRound(roomCode, bot.id); emitRoom(roomCode); return; }
 
+  bot.hasPickedUp = false;
   room.currentPlayerIndex = (room.currentPlayerIndex + 1) % room.players.length;
+  room.players[room.currentPlayerIndex].hasPickedUp = false;
   emitRoom(roomCode);
   maybeRunBotTurn(roomCode);
 }
@@ -330,14 +333,14 @@ function addBot(room){
   const names=["Bot Barry","Bot Brenda","Bot Bill","Bot Bella"];
   const used=new Set(room.players.map(p=>p.name));
   const name=names.find(n=>!used.has(n)) || `Bot ${room.players.length+1}`;
-  room.players.push({id:`bot-${Math.random().toString(36).slice(2,10)}`, token:createPlayerToken(), name, hand:[], isDown:false, totalScore:0, lastRoundScore:null, isBot:true, disconnected:false});
+  room.players.push({id:`bot-${Math.random().toString(36).slice(2,10)}`, token:createPlayerToken(), name, hand:[], isDown:false, totalScore:0, lastRoundScore:null, isBot:true, disconnected:false, hasPickedUp:false,hasPickedUp:false});
 }
 
 io.on("connection", socket => {
   socket.on("createRoom", ({name, playerToken}) => {
     const roomCode=createRoomCode();
     const token = playerToken || createPlayerToken();
-    rooms[roomCode]={players:[{id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:"",roundScores:[]};
+    rooms[roomCode]={players:[{id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false,hasPickedUp:false,hasPickedUp:false}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:"",roundScores:[]};
     socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token}); emitRoom(roomCode);
   });
 
@@ -361,7 +364,7 @@ io.on("connection", socket => {
 
     if(room.phase!=="lobby") return socket.emit("errorMessage","Game already started.");
     if(room.players.length>=4) return socket.emit("errorMessage","Room is full.");
-    room.players.push({id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false});
+    room.players.push({id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false,hasPickedUp:false,hasPickedUp:false});
     socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token}); emitRoom(roomCode);
   });
 
@@ -394,24 +397,33 @@ io.on("connection", socket => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
     const current=room.players[room.currentPlayerIndex];
     if(!current || current.id!==socket.id) return socket.emit("errorMessage","Not your turn.");
+    if(current.hasPickedUp) return socket.emit("errorMessage","You have already picked up this turn. Play cards, then discard.");
     if(!room.deck.length) return socket.emit("errorMessage","Deck is empty.");
-    current.hand.push(room.deck.pop()); emitRoom(roomCode);
+    current.hand.push(room.deck.pop());
+    current.hasPickedUp = true;
+    emitRoom(roomCode);
   });
 
   socket.on("takeTopDiscard", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
     const current=room.players[room.currentPlayerIndex];
     if(!current || current.id!==socket.id) return socket.emit("errorMessage","Not your turn.");
+    if(current.hasPickedUp) return socket.emit("errorMessage","You have already picked up this turn. Play cards, then discard.");
     if(!room.discardPile.length) return socket.emit("errorMessage","Discard pile is empty.");
-    current.hand.push(room.discardPile.pop()); emitRoom(roomCode);
+    current.hand.push(room.discardPile.pop());
+    current.hasPickedUp = true;
+    emitRoom(roomCode);
   });
 
   socket.on("takeAllDiscard", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
     const current=room.players[room.currentPlayerIndex];
     if(!current || current.id!==socket.id) return socket.emit("errorMessage","Not your turn.");
+    if(current.hasPickedUp) return socket.emit("errorMessage","You have already picked up this turn. Play cards, then discard.");
     if(!room.discardPile.length) return socket.emit("errorMessage","Discard pile is empty.");
-    current.hand.push(...room.discardPile.splice(0)); emitRoom(roomCode);
+    current.hand.push(...room.discardPile.splice(0));
+    current.hasPickedUp = true;
+    emitRoom(roomCode);
   });
 
   socket.on("layMeld", ({roomCode, cardIds}) => {
@@ -469,10 +481,13 @@ io.on("connection", socket => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
     const current=room.players[room.currentPlayerIndex];
     if(!current || current.id!==socket.id) return socket.emit("errorMessage","Not your turn.");
+    if(!current.hasPickedUp) return socket.emit("errorMessage","You must pick up before discarding.");
     const idx=current.hand.findIndex(c=>c.id===cardId); if(idx<0) return socket.emit("errorMessage","Card not found.");
     room.discardPile.push(current.hand.splice(idx,1)[0]);
     if(current.hand.length===0){ endRound(roomCode,current.id); emitRoom(roomCode); return; }
+    current.hasPickedUp = false;
     room.currentPlayerIndex=(room.currentPlayerIndex+1)%room.players.length;
+    room.players[room.currentPlayerIndex].hasPickedUp = false;
     emitRoom(roomCode); maybeRunBotTurn(roomCode);
   });
 
@@ -504,6 +519,37 @@ io.on("connection", socket => {
     emitRoom(roomCode);
   });
 
+
+
+  socket.on("exitGame", ({ roomCode }) => {
+    const room = rooms[String(roomCode || "").trim()];
+    if(!room) return;
+
+    const idx = room.players.findIndex(p => p.id === socket.id && !p.isBot);
+    if(idx < 0) return;
+
+    const old = room.players[idx];
+    const botName = `${old.name} Bot`;
+
+    room.players[idx] = {
+      ...old,
+      id: `bot-${Math.random().toString(36).slice(2,10)}`,
+      token: createPlayerToken(),
+      name: botName,
+      isBot: true,
+      disconnected: false,
+      hasPickedUp: old.hasPickedUp || false
+    };
+
+    for(const meld of room.tableMelds){
+      if(meld.ownerId === old.id) meld.ownerId = room.players[idx].id;
+    }
+
+    socket.leave(roomCode);
+    socket.emit("exitedGame");
+    emitRoom(roomCode);
+    maybeRunBotTurn(roomCode);
+  });
 
   socket.on("disconnect", () => {
     for(const [roomCode,room] of Object.entries(rooms)){
