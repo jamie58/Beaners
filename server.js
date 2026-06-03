@@ -1,3 +1,11 @@
+process.on('uncaughtException', err => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+});
+
+process.on('unhandledRejection', err => {
+  console.error('UNHANDLED REJECTION:', err);
+});
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -327,7 +335,7 @@ function endRound(roomCode, winnerId){
     room.winnerMessage = `${winnerGame.name} wins Beaners with ${winnerGame.totalScore} points!`;
   } else {
     room.winnerMessage = `${winner?.name || "Someone"} yelled BEANERS!`;
-    scheduleAutoNextRound(roomCode);
+    if (typeof scheduleAutoNextRound === 'function') scheduleAutoNextRound(roomCode);
   }
 }
 
@@ -613,6 +621,26 @@ function isOwner(room, socket){
 function emitToast(roomCode, message){
   io.to(roomCode).emit("toast", { message });
 }
+
+
+function scheduleAutoNextRound(roomCode){
+  const room = rooms[roomCode];
+  if(!room || room.phase !== "roundOver") return;
+
+  if(room.autoNextRoundTimer) clearTimeout(room.autoNextRoundTimer);
+
+  room.autoNextRoundTimer = setTimeout(() => {
+    const currentRoom = rooms[roomCode];
+    if(!currentRoom || currentRoom.phase !== "roundOver") return;
+
+    currentRoom.round += 1;
+    currentRoom.starterIndex = (currentRoom.starterIndex + 1) % currentRoom.players.length;
+    resetRound(currentRoom);
+    emitRoom(roomCode);
+    maybeRunBotTurn(roomCode);
+  }, 15000);
+}
+
 
 io.on("connection", socket => {
   socket.on("createRoom", ({name, playerToken}) => {

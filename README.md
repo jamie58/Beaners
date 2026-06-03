@@ -1,9 +1,8 @@
-# Beaners v32 Session Stability Fix
+# Beaners v33 Server Crash Fix
 
-Critical fixes:
-- Exit now finds the live room by socket/token if the client room code is stale.
-- Restart uses the same live-room fallback.
-- Reconnect uses currentRoomCode/latestState before localStorage.
-- Server binds every action to the stable player token before checking turn ownership.
-- Final discard remains guaranteed when the player is down with one card left.
-- Removes misleading room-not-found behaviour while the player is visibly in a room.
+Fixes:
+- Adds the missing scheduleAutoNextRound function.
+- Prevents the server from crashing at round end.
+- Keeps the 15-second scorecard auto-next-round behaviour.
+- Clears the auto-next timer if Next Round is started manually.
+- Adds basic server error logging for future debugging.
