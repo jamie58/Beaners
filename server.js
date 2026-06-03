@@ -437,7 +437,7 @@ function addBot(room){
 
   const seats = ["top","left","right","bottom"];
   const usedSeats = new Set(room.players.map(p => p.seatKey).filter(Boolean));
-  const seatKey = seats.find(s => !usedSeats.has(s)) || null;
+  const seatKey = seats.find(s => !usedSeats.has(s));
 
   if(!seatKey) return false;
 
@@ -458,25 +458,6 @@ function addBot(room){
   return true;
 }
 
-
-
-function scheduleAutoNextRound(roomCode){
-  const room = rooms[roomCode];
-  if(!room || room.phase !== "roundOver") return;
-
-  if(room.autoNextRoundTimer) clearTimeout(room.autoNextRoundTimer);
-
-  room.autoNextRoundTimer = setTimeout(() => {
-    const currentRoom = rooms[roomCode];
-    if(!currentRoom || currentRoom.phase !== "roundOver") return;
-
-    currentRoom.round += 1;
-    currentRoom.starterIndex = (currentRoom.starterIndex + 1) % currentRoom.players.length;
-    resetRound(currentRoom);
-    emitRoom(roomCode);
-    maybeRunBotTurn(roomCode);
-  }, 15000);
-}
 
 io.on("connection", socket => {
   socket.on("createRoom", ({name, playerToken}) => {
@@ -531,6 +512,7 @@ io.on("connection", socket => {
     roomCode = String(roomCode || "").replace(/\D/g, "").trim();
     const room = rooms[roomCode];
     if(!room || room.phase !== "lobby") return;
+
     const allowed = ["top","left","right","bottom"];
     if(!allowed.includes(seatKey)) return socket.emit("errorMessage","Invalid seat.");
 
@@ -539,11 +521,11 @@ io.on("connection", socket => {
 
     const taken = room.players.find(p => p.seatKey === seatKey && p.id !== player.id);
 
-    // If a bot is sitting there, let the real player claim the seat and remove the bot.
+    // Real players can claim seats currently occupied by bots.
     if(taken && taken.isBot){
       const botIndex = room.players.findIndex(p => p.id === taken.id);
       if(botIndex !== -1) room.players.splice(botIndex, 1);
-    } else if(taken) {
+    } else if(taken){
       return socket.emit("errorMessage","That seat is already taken by another player.");
     }
 

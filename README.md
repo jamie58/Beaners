@@ -1,7 +1,8 @@
-# Beaners v25
+# Beaners v27
 
 Updates:
-- Adds a green reconnect/refresh button beside the round/Beaner indicator.
-- Button attempts to reconnect to the current room without a full page reload.
-- Uses saved room code and stable player token from localStorage.
-- Button spins while reconnecting.
+- Restores a purple branded loading/splash screen.
+- Splash screen uses the supplied app icon.
+- Lobby branding now matches the app icon/purple theme.
+- Top Beaners logo now uses the app icon styling.
+- Purple/gold visual theme applied across the app shell.

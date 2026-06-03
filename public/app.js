@@ -1,3 +1,15 @@
+
+function hideSplashScreen(){
+  const splash = $("splashScreen");
+  if(!splash) return;
+  splash.classList.add("splashHidden");
+  setTimeout(() => splash.remove(), 550);
+}
+
+window.addEventListener("load", () => {
+  setTimeout(hideSplashScreen, 650);
+});
+
 const socket = io();
 const SESSION_ROOM_KEY = "beanersRoomCode";
 const SESSION_PLAYER_KEY = "beanersPlayerId";
@@ -147,16 +159,12 @@ function reconnectToRoom(){
     btn.disabled = true;
   }
 
-  try{
-    socket.disconnect();
-  }catch(e){}
+  try{ socket.disconnect(); }catch(e){}
 
   setTimeout(() => {
     socket.connect();
-
     setTimeout(() => {
       socket.emit("rejoinRoom", { roomCode, playerToken });
-
       if(btn){
         setTimeout(() => {
           btn.classList.remove("spinning");
@@ -176,7 +184,6 @@ function doExitGame(){
 if ($("exitGameBtn")) $("exitGameBtn").onclick = doExitGame;
 if ($("exitGameBtn2")) $("exitGameBtn2").onclick = doExitGame;
 if ($("exitXBtn")) $("exitXBtn").onclick = doExitGame;
-
 if ($("reconnectBtn")) $("reconnectBtn").onclick = reconnectToRoom;
 
 if ($("restartGameBtn")) $("restartGameBtn").onclick = () => {
@@ -270,6 +277,7 @@ socket.on("joinedRoom", ({roomCode, playerId, playerToken}) => {
   $("roomCode").textContent = roomCode;
   $("lobby").classList.add("hidden");
   $("game").classList.remove("hidden");
+  hideSplashScreen();
   if($("exitXBtn")) $("exitXBtn").classList.remove("hidden");
   if($("restartGameBtn")) $("restartGameBtn").classList.remove("hidden");
   if($("reconnectBtn")) $("reconnectBtn").classList.remove("hidden");

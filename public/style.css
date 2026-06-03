@@ -2057,7 +2057,40 @@ body.scorecardOpen .appBar{
 }
 
 
-/* v25 green reconnect button */
+/* v26 fixed one-line app bar + reconnect button + seat controls */
+.appBar{
+  display:grid !important;
+  grid-template-columns:minmax(104px, 1fr) auto minmax(118px, 1fr) !important;
+  align-items:center !important;
+  gap:6px !important;
+  height:34px !important;
+  width:100% !important;
+  margin:0 0 6px !important;
+  white-space:nowrap !important;
+}
+
+.leftTopGroup,
+.rightTopGroup{
+  display:flex !important;
+  align-items:center !important;
+  gap:4px !important;
+  min-width:0 !important;
+}
+
+.leftTopGroup{
+  justify-self:start !important;
+}
+
+.rightTopGroup{
+  justify-self:end !important;
+}
+
+.beanersLogo{
+  justify-self:center !important;
+  min-width:0 !important;
+  white-space:nowrap !important;
+}
+
 .reconnectBtn{
   width:30px;
   height:30px;
@@ -2090,20 +2123,289 @@ body.scorecardOpen .appBar{
   to{transform:rotate(360deg)}
 }
 
+.seatPick:not(:disabled){
+  cursor:pointer;
+}
+
+.seatPick:disabled{
+  opacity:.45;
+}
+
 @media(max-width:850px){
+  .appBar{
+    grid-template-columns:minmax(84px, 1fr) auto minmax(104px, 1fr) !important;
+    height:30px !important;
+    gap:3px !important;
+  }
+
+  .leftTopGroup,
+  .rightTopGroup{
+    gap:2px !important;
+  }
+
+  .reconnectBtn,
+  .soundBtn,
+  .restartBtn,
+  .exitX{
+    width:24px !important;
+    height:24px !important;
+    min-width:24px !important;
+  }
+
   .reconnectBtn{
-    width:26px;
-    height:26px;
-    min-width:26px;
-    font-size:15px;
+    font-size:14px !important;
+  }
+
+  .copyRoomBtn.roomPill{
+    min-width:46px !important;
+    max-width:56px !important;
+    font-size:12px !important;
+    padding:4px 5px !important;
+    letter-spacing:1px !important;
+  }
+
+  .beanerPill{
+    max-width:78px !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
+
+  .beanersLogo{
+    max-width:118px !important;
+    overflow:hidden !important;
   }
 }
 
-@media(max-width:430px){
-  .reconnectBtn{
-    width:24px;
-    height:24px;
-    min-width:24px;
-    font-size:14px;
+@media(max-width:390px){
+  .appBar{
+    grid-template-columns:minmax(76px, 1fr) auto minmax(96px, 1fr) !important;
+  }
+
+  .beanersLogo{
+    max-width:96px !important;
+    font-size:10px !important;
+    padding-left:5px !important;
+    padding-right:5px !important;
+  }
+
+  .beanerPill{
+    max-width:68px !important;
+    font-size:9.5px !important;
+  }
+
+  .reconnectBtn,
+  .soundBtn,
+  .restartBtn,
+  .exitX{
+    width:22px !important;
+    height:22px !important;
+    min-width:22px !important;
+  }
+}
+
+
+/* v27 purple brand splash + icon-matched lobby/logo */
+:root{
+  --brand-purple:#3b1d77;
+  --brand-purple-dark:#24104f;
+  --brand-purple-mid:#5b2bbd;
+  --brand-gold:#f8c84a;
+}
+
+body{
+  background:
+    radial-gradient(circle at 50% 0%, rgba(248,200,74,.18), transparent 24%),
+    radial-gradient(circle at center, #5b2bbd, #24104f 72%) !important;
+}
+
+.splashScreen{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(248,200,74,.24), transparent 22%),
+    linear-gradient(145deg, #5b2bbd, #24104f 72%);
+  color:white;
+  transition:opacity .45s ease, transform .45s ease;
+}
+
+.splashHidden{
+  opacity:0;
+  transform:scale(1.04);
+  pointer-events:none;
+}
+
+.splashIconWrap{
+  width:128px;
+  height:128px;
+  border-radius:28px;
+  padding:8px;
+  background:rgba(255,255,255,.10);
+  border:2px solid rgba(248,200,74,.8);
+  box-shadow:
+    0 18px 55px rgba(0,0,0,.38),
+    inset 0 0 0 1px rgba(255,255,255,.18);
+  margin-bottom:16px;
+}
+
+.splashIcon{
+  width:100%;
+  height:100%;
+  border-radius:22px;
+  display:block;
+}
+
+.splashTitle{
+  font-weight:1000;
+  font-size:34px;
+  letter-spacing:2px;
+  text-shadow:0 4px 0 rgba(0,0,0,.32);
+}
+
+.splashSub{
+  margin-top:8px;
+  color:#fde68a;
+  font-weight:800;
+  font-size:14px;
+  letter-spacing:.5px;
+}
+
+.startScreen{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(245,239,255,.96)) !important;
+  border:1px solid rgba(248,200,74,.45);
+  box-shadow:0 16px 50px rgba(0,0,0,.28);
+}
+
+.startLogo.iconLogo{
+  height:64px;
+  justify-content:center;
+  gap:10px;
+  color:#fff7ed;
+  background:
+    linear-gradient(135deg, rgba(248,200,74,.20), rgba(255,255,255,.06)),
+    linear-gradient(135deg, var(--brand-purple-mid), var(--brand-purple-dark));
+  border:1px solid rgba(248,200,74,.75);
+  box-shadow:0 8px 26px rgba(59,29,119,.35), inset 0 0 0 1px rgba(255,255,255,.12);
+  text-shadow:0 3px 0 rgba(0,0,0,.28);
+}
+
+.startIcon{
+  width:46px;
+  height:46px;
+  border-radius:12px;
+  box-shadow:0 4px 14px rgba(0,0,0,.28);
+}
+
+.startLogo span{
+  font-size:24px;
+  letter-spacing:1.4px;
+}
+
+.startHint{
+  color:#4c1d95 !important;
+  font-weight:700;
+}
+
+.startScreen input{
+  border:2px solid rgba(91,43,189,.18);
+}
+
+.startActions button:first-child{
+  background:linear-gradient(135deg, #7c3aed, #3b1d77);
+}
+
+.startActions button:last-child{
+  background:linear-gradient(135deg, #f8c84a, #d97706);
+  color:#2b2118;
+}
+
+.appBar{
+  color:white;
+}
+
+.beanersLogo{
+  background:
+    linear-gradient(135deg, rgba(248,200,74,.20), rgba(255,255,255,.06)),
+    linear-gradient(135deg, var(--brand-purple-mid), var(--brand-purple-dark)) !important;
+  border:1px solid rgba(248,200,74,.75) !important;
+  color:#fff7ed !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:6px !important;
+}
+
+.miniLogoIcon{
+  width:22px;
+  height:22px;
+  border-radius:6px;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+
+.beanersLogo span{
+  line-height:1;
+}
+
+.roomPill,
+.soundBtn{
+  background:rgba(36,16,79,.78) !important;
+  border-color:rgba(248,200,74,.35) !important;
+}
+
+.beanerPill{
+  background:linear-gradient(135deg, #f8c84a, #d97706) !important;
+  color:#24104f !important;
+}
+
+.seat{
+  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(245,239,255,.96)) !important;
+  border-color:rgba(248,200,74,.35) !important;
+}
+
+.seat.you{
+  background:linear-gradient(180deg, #fff7ed, #f5e8ff) !important;
+  border-color:rgba(248,200,74,.8) !important;
+}
+
+.handPanel{
+  background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(245,239,255,.96)) !important;
+}
+
+@media(max-width:850px){
+  .splashIconWrap{
+    width:104px;
+    height:104px;
+    border-radius:24px;
+  }
+
+  .splashTitle{
+    font-size:28px;
+  }
+
+  .startLogo.iconLogo{
+    height:54px;
+  }
+
+  .startIcon{
+    width:38px;
+    height:38px;
+  }
+
+  .startLogo span{
+    font-size:20px;
+  }
+
+  .miniLogoIcon{
+    width:18px;
+    height:18px;
+  }
+
+  .beanersLogo{
+    gap:4px !important;
   }
 }

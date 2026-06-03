@@ -12,6 +12,13 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+  <div id="splashScreen" class="splashScreen">
+    <div class="splashIconWrap">
+      <img src="/icons/icon-192.png" alt="Beaners icon" class="splashIcon">
+    </div>
+    <div class="splashTitle">BEANERS</div>
+    <div class="splashSub">Loading the table...</div>
+  </div>
   <main>
     <header class="appBar">
       <div class="leftTopGroup">
@@ -19,13 +26,18 @@
         <button id="restartGameBtn" class="restartBtn hidden" title="Restart game">↻</button>
         <button id="copyRoomBtn" class="roomPill copyRoomBtn">----</button>
       </div>
-      <div class="beanersLogo"><span>🫘</span> BEANERS <span>♠</span></div>
-      <button id="reconnectBtn" class="reconnectBtn hidden" title="Refresh / reconnect">⟳</button>
+
+      <div class="beanersLogo"><img src="/icons/icon-192.png" alt="" class="miniLogoIcon"><span>BEANERS</span></div>
+
+      <div class="rightTopGroup">
+        <button id="reconnectBtn" class="reconnectBtn hidden" title="Refresh / reconnect">⟳</button>
         <div id="compactBeaner" class="beanerPill">R1 • Beaner A</div>
+        <button id="soundToggleBtn" class="soundBtn" title="Sound on/off">🔊</button>
+      </div>
     </header>
 
     <section id="lobby" class="panel lobby startScreen">
-      <div class="startLogo"><span>🫘</span> BEANERS <span>♠</span></div>
+      <div class="startLogo iconLogo"><img src="/icons/icon-192.png" alt="" class="startIcon"><span>BEANERS</span></div>
       <p class="startHint">Enter your name first, then create a room or join your mates.</p>
 
       <label>Your player name</label>
