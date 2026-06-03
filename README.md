@@ -1,7 +1,7 @@
-# Beaners v24
+# Beaners v25
 
 Updates:
-- Adds restart game icon back to the top-left bar.
-- Restart returns everyone to the lobby and clears the current game state.
-- Makes the discard pile area slightly smaller to reduce overlap with side seats.
-- Scorecard modal now sits above the hand/actions area at round end.
+- Adds a green reconnect/refresh button beside the round/Beaner indicator.
+- Button attempts to reconnect to the current room without a full page reload.
+- Uses saved room code and stable player token from localStorage.
+- Button spins while reconnecting.

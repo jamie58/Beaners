@@ -131,6 +131,42 @@ $("sortSuitBtn").onclick = () => {
   renderHand();
 };
 
+
+function reconnectToRoom(){
+  const roomCode = currentRoomCode || localStorage.getItem(SESSION_ROOM_KEY);
+  const playerToken = localStorage.getItem(SESSION_TOKEN_KEY);
+
+  if(!roomCode || !playerToken){
+    alert("No saved room found to reconnect to.");
+    return;
+  }
+
+  const btn = $("reconnectBtn");
+  if(btn){
+    btn.classList.add("spinning");
+    btn.disabled = true;
+  }
+
+  try{
+    socket.disconnect();
+  }catch(e){}
+
+  setTimeout(() => {
+    socket.connect();
+
+    setTimeout(() => {
+      socket.emit("rejoinRoom", { roomCode, playerToken });
+
+      if(btn){
+        setTimeout(() => {
+          btn.classList.remove("spinning");
+          btn.disabled = false;
+        }, 900);
+      }
+    }, 250);
+  }, 150);
+}
+
 function doExitGame(){
   if(confirm("Exit game? A bot will take over your seat.")){
     socket.emit("exitGame", { roomCode: currentRoomCode });
@@ -140,6 +176,8 @@ function doExitGame(){
 if ($("exitGameBtn")) $("exitGameBtn").onclick = doExitGame;
 if ($("exitGameBtn2")) $("exitGameBtn2").onclick = doExitGame;
 if ($("exitXBtn")) $("exitXBtn").onclick = doExitGame;
+
+if ($("reconnectBtn")) $("reconnectBtn").onclick = reconnectToRoom;
 
 if ($("restartGameBtn")) $("restartGameBtn").onclick = () => {
   if(confirm("Restart this game and return everyone to the lobby?")){
@@ -234,6 +272,7 @@ socket.on("joinedRoom", ({roomCode, playerId, playerToken}) => {
   $("game").classList.remove("hidden");
   if($("exitXBtn")) $("exitXBtn").classList.remove("hidden");
   if($("restartGameBtn")) $("restartGameBtn").classList.remove("hidden");
+  if($("reconnectBtn")) $("reconnectBtn").classList.remove("hidden");
   setupDiscardDrop();
 });
 
