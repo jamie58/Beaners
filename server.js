@@ -278,6 +278,7 @@ function publicRoomState(roomCode){
   if(!room) return null;
   return {
     roomCode,
+    appVersion: "v37",
     phase: room.phase,
     round: room.round,
     beaner: beanerForRound(room.round),
@@ -504,41 +505,94 @@ function addBot(room, preferredSeat=null){
 }
 
 
-io.on("connection", socket => {
-  socket.on("createRoom", ({name, playerToken}) => {
-    const roomCode=createRoomCode();
-    const token = playerToken || createPlayerToken();
-    rooms[roomCode]={players:[{id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false,hasPickedUp:false,hasPickedUp:false,seatKey:null}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:"",roundScores:[],ownerToken:token,starterPlayerToken:null};
-    socket.data.playerToken = token;
-    socket.data.playerToken = token;
-    socket.data.playerToken = token;
-    socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token}); emitRoom(roomCode);
-  });
 
+function normaliseRoomCode(roomCode){
+  return String(roomCode || "").replace(/\D/g, "").trim();
+}
+
+function emitToast(roomCode, message){
+  io.to(roomCode).emit("toast", { message });
+}
+
+function ensureOwner(room){
+  if(!room) return null;
+  const humans = room.players.filter(p => !p.isBot);
+  if(!humans.length){ room.ownerToken = null; return null; }
+  const owner = humans.find(p => p.token === room.ownerToken);
+  if(owner) return owner;
+  room.ownerToken = humans[0].token;
+  return humans[0];
+}
+function isOwner(room, socket){
+  const owner = ensureOwner(room);
+  return !!owner && socket.data?.playerToken === owner.token;
+}
+io.on("connection", socket => {
+  socket.on("createRoom", ({name})=>{
+    const roomCode = createRoomCode();
+    const token = createPlayerToken();
+
+    rooms[roomCode] = {
+      players:[{
+        id:socket.id,
+        token,
+        name:cleanName(name),
+        hand:[],
+        isDown:false,
+        totalScore:0,
+        lastRoundScore:null,
+        isBot:false,
+        disconnected:false,
+        hasPickedUp:false,
+        seatKey:null
+      }],
+      deck:[],
+      discardPile:[],
+      tableMelds:[],
+      currentPlayerIndex:0,
+      starterIndex:0,
+      round:1,
+      phase:"lobby",
+      winnerMessage:"",
+      roundScores:[],
+      ownerToken:token,
+      starterPlayerToken:null,
+      version:0
+    };
+
+    socket.data.playerToken = token;
+    socket.join(roomCode);
+    socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
+    emitRoom(roomCode);
+  });
   socket.on("joinRoom", ({roomCode,name,playerToken}) => {
-    roomCode=normaliseRoomCode(roomCode);
-    const room=rooms[roomCode];
+    roomCode = normaliseRoomCode(roomCode);
+    const room = rooms[roomCode];
     if(!room) return socket.emit("errorMessage","Room not found.");
 
+    if(room.phase !== "lobby") return socket.emit("errorMessage","Game already started.");
+
     const token = playerToken || createPlayerToken();
     socket.data.playerToken = token;
 
-    const existing = room.players.find(p => p.token === token && !p.isBot);
+    const existing = room.players.find(p => !p.isBot && p.token === token);
     if(existing){
       const oldId = existing.id;
       existing.id = socket.id;
       existing.disconnected = false;
       if(name) existing.name = cleanName(name);
-      for(const meld of room.tableMelds || []){ if(meld.ownerId === oldId) meld.ownerId = socket.id; }
+      for(const meld of room.tableMelds || []){
+        if(meld.ownerId === oldId) meld.ownerId = socket.id;
+      }
+
       socket.join(roomCode);
       socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
       emitRoom(roomCode);
-      socket.emit("toast", { message: "Connected" });
+      socket.emit("toast", { message:"Connected" });
       return;
     }
 
-    if(room.phase!=="lobby") return socket.emit("errorMessage","Game already started.");
-    if(room.players.filter(p=>!p.isBot).length>=4) return socket.emit("errorMessage","Room is full.");
+    if(room.players.filter(p => !p.isBot).length >= 4) return socket.emit("errorMessage","Room is full.");
 
     room.players.push({
       id:socket.id,

@@ -2710,3 +2710,17 @@ body{
   #starterWheel{width:190px;height:190px}
   #wheelResult{font-size:20px}
 }
+
+
+/* v37 loading screen version */
+.splashVersion{
+  position:absolute;
+  bottom:18px;
+  left:0;
+  right:0;
+  text-align:center;
+  color:rgba(255,247,237,.72);
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:1px;
+}

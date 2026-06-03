@@ -1,10 +1,8 @@
-# Beaners v36 Lobby Rewrite
+# Beaners v37 Create/Join Fix + Version Splash
 
-Updates:
-- New table-style lobby matching the mockup.
-- Joined but unseated players are visible in the lobby list.
-- Players can sit, move seats, claim bot seats, and see everyone’s position.
-- Bots can be added to specific seats and removed from seats.
-- Starter wheel uses only seated players.
-- Wheel winner is stored server-side and becomes the actual first player.
-- Keeps the latest sound/haptic package.
+Fixes:
+- Restores/fixes Create Room and Join Room.
+- Rebuilds create/join handlers so joined players appear in the new lobby.
+- Adds version number to the loading splash screen.
+- Adds appVersion to server room state.
+- Syntax-checked server.js with node --check.

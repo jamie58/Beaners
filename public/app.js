@@ -235,13 +235,13 @@ if ($("copyRoomBtn2")) $("copyRoomBtn2").onclick = copyJoinCode;
 
 if ($("soundToggleBtn")) {
   $("soundToggleBtn").onclick = () => {
-    unlockAudio();
+    unlockAudio?.();
     setMuted(!audioSettings.muted);
   };
 }
 if ($("soundEnabledStart")) {
   $("soundEnabledStart").onchange = e => {
-    unlockAudio();
+    unlockAudio?.();
     setMuted(!e.target.checked);
   };
 }
