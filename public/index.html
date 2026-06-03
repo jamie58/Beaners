@@ -66,29 +66,52 @@
 
       <div id="winnerMessage" class="winner hidden"></div>
 
-      <section id="lobbyControls" class="panel">
-        <div class="joinCodePanel">
-          <div>Tell other players to enter:</div>
-          <strong id="bigJoinCode">----</strong>
-          <button id="copyRoomBtn2" class="secondary">Copy Join Code</button>
-        </div>
-        <button id="addBotBtn" class="secondary">Add 1 Bot</button>
-        <button id="fillBotsBtn" class="secondary">Fill Empty Seats With Bots</button>
-        <p class="hint">You can start with 2–4 players. Bots are optional.</p>
-        <div class="seatPicker">
-          <h3>Choose your seat</h3>
-          <div class="seatPickGrid">
-            <button class="seatPick" data-seat="top">Top Seat</button>
-            <button class="seatPick" data-seat="left">Left Seat</button>
-            <button class="seatPick" data-seat="right">Right Seat</button>
-            <button class="seatPick" data-seat="bottom">Bottom Seat</button>
+      <section id="lobbyControls" class="lobbyRewrite hidden">
+        <div class="lobbyCard">
+          <div class="lobbyUnseated">
+            <strong>In Lobby:</strong>
+            <div id="lobbyUnseatedNames">Waiting...</div>
           </div>
-          <div id="seatStatus" class="seatStatus"></div>
+
+          <div class="seatMap">
+            <button class="lobbySeat seatMapTop" data-seat="top">
+              <span class="seatName">Sit Here</span>
+              <span class="seatAction">Tap to sit</span>
+            </button>
+
+            <button class="lobbySeat seatMapLeft" data-seat="left">
+              <span class="seatName">Sit Here</span>
+              <span class="seatAction">Tap to sit</span>
+            </button>
+
+            <div class="lobbyTableCircle">
+              <div id="seatTopLabel" class="tableSeatName tableTop">Top</div>
+              <div id="seatLeftLabel" class="tableSeatName tableLeft">Left</div>
+              <div id="seatRightLabel" class="tableSeatName tableRight">Right</div>
+              <div id="seatBottomLabel" class="tableSeatName tableBottom">Bottom</div>
+            </div>
+
+            <button class="lobbySeat seatMapRight" data-seat="right">
+              <span class="seatName">Sit Here</span>
+              <span class="seatAction">Tap to sit</span>
+            </button>
+
+            <button class="lobbySeat seatMapBottom" data-seat="bottom">
+              <span class="seatName">Sit Here</span>
+              <span class="seatAction">Tap to sit</span>
+            </button>
+          </div>
         </div>
-        <button id="spinBtn">Spin Starter Wheel</button>
-        <div id="wheelResult"></div>
-        <button id="startBtn">Let’s Beaners!</button>
-        <button id="exitGameBtn" class="dangerBtn hidden">Exit Game</button>
+
+        <div class="wheelRow">
+          <canvas id="starterWheel" width="280" height="280"></canvas>
+          <div class="wheelControls">
+            <button id="spinBtn">Spin Wheel</button>
+            <div id="wheelResult"></div>
+          </div>
+        </div>
+
+        <button id="startBtn" class="letsBeanersBtn">Leeeeets Beaners - Scraps On!</button>
       </section>
 
       <section id="playingControls" class="hidden">

@@ -1,18 +1,10 @@
-# Beaners v35 Real Sound Files
+# Beaners v36 Lobby Rewrite
 
 Updates:
-- Replaces placeholder sounds with supplied WAV files:
-  - beaners.wav
-  - deal.wav
-  - discard.wav
-  - pickup.wav
-  - pile.wav
-  - shuffle.wav
-
-Still keeps generated placeholder sounds for:
-  - meld.wav
-  - scorecard.wav
-  - swap.wav
-  - turn.wav
-  - urgent.wav
-  - warning.wav
+- New table-style lobby matching the mockup.
+- Joined but unseated players are visible in the lobby list.
+- Players can sit, move seats, claim bot seats, and see everyone’s position.
+- Bots can be added to specific seats and removed from seats.
+- Starter wheel uses only seated players.
+- Wheel winner is stored server-side and becomes the actual first player.
+- Keeps the latest sound/haptic package.

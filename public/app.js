@@ -137,8 +137,8 @@ $("joinBtn").onclick = () => socket.emit("joinRoom", {
 });
 $("addBotBtn").onclick = () => socket.emit("addBot", { roomCode: currentRoomCode });
 $("fillBotsBtn").onclick = () => socket.emit("fillBots", { roomCode: currentRoomCode });
-$("spinBtn").onclick = () => socket.emit("spinStarter", { roomCode: currentRoomCode });
-$("startBtn").onclick = () => socket.emit("startGame", { roomCode: currentRoomCode });
+$("spinBtn").onclick = () => socket.emit("spinStarter", { roomCode: currentRoomCode || latestState?.roomCode || localStorage.getItem(SESSION_ROOM_KEY) });
+$("startBtn").onclick = () => socket.emit("startGame", { roomCode: currentRoomCode || latestState?.roomCode || localStorage.getItem(SESSION_ROOM_KEY) });
 $("drawDeckBtn").onclick = () => { playSound("pickup"); vibrate(20); socket.emit("drawFromDeck", { roomCode: currentRoomCode }); };
 $("takeTopDiscardBtn").onclick = () => { playSound("pickup"); vibrate(20); socket.emit("takeTopDiscard", { roomCode: currentRoomCode }); };
 $("takeAllDiscardBtn").onclick = () => { if(confirm("Pick up the entire discard pile?")) { playSound("shuffle"); vibrate([30,40,30]); socket.emit("takeAllDiscard", { roomCode: currentRoomCode }); } };
@@ -466,6 +466,7 @@ function renderState(){
   });
 
   renderSeatStatus();
+  renderLobbyRewrite();
   renderPlayers();
   renderMelds();
   renderHand();
@@ -970,3 +971,148 @@ function toggleDebugPanel(){
   `;
   panel.classList.toggle("hidden");
 }
+
+
+const wheelColours = ["#e8c600", "#19a0b5", "#37a51f", "#c92a0a"];
+
+socket.on("starterChosen", ({token, name}) => {
+  animateStarterWheel(token, name);
+});
+
+function seatedLobbyPlayers(){
+  if(!latestState) return [];
+  const order = ["top","left","bottom","right"];
+  return order.map(seat => latestState.players.find(p => p.seatKey === seat)).filter(Boolean);
+}
+
+function drawStarterWheel(rotation=0){
+  const canvas = $("starterWheel");
+  if(!canvas || !latestState) return;
+  const ctx = canvas.getContext("2d");
+  const players = seatedLobbyPlayers();
+  const w = canvas.width, h = canvas.height;
+  const cx = w/2, cy = h/2, r = Math.min(w,h)/2 - 8;
+  ctx.clearRect(0,0,w,h);
+
+  if(!players.length){
+    ctx.fillStyle = "#2b145c";
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    return;
+  }
+
+  const slice = Math.PI*2/players.length;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(rotation);
+  players.forEach((p,i)=>{
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.arc(0,0,r,i*slice,(i+1)*slice);
+    ctx.closePath();
+    ctx.fillStyle = wheelColours[i % wheelColours.length];
+    ctx.fill();
+
+    ctx.save();
+    ctx.rotate(i*slice + slice/2);
+    ctx.textAlign="center";
+    ctx.fillStyle="white";
+    ctx.font="bold 22px system-ui, sans-serif";
+    ctx.translate(r*.55,0);
+    ctx.rotate(Math.PI/2);
+    ctx.fillText(p.name.replace(" Bot",""),0,0);
+    ctx.restore();
+  });
+  ctx.restore();
+
+  ctx.fillStyle="#fff7ed";
+  ctx.beginPath();
+  ctx.moveTo(cx, cy-r-4);
+  ctx.lineTo(cx-18, cy-r-44);
+  ctx.lineTo(cx+18, cy-r-44);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function animateStarterWheel(winnerToken, winnerName){
+  const players = seatedLobbyPlayers();
+  const winnerIndex = players.findIndex(p => p.token === winnerToken || p.id === winnerToken);
+  const slice = players.length ? Math.PI*2/players.length : Math.PI*2;
+  const targetAngle = winnerIndex >= 0 ? (Math.PI*1.5 - (winnerIndex*slice + slice/2)) : 0;
+  const spins = Math.PI*2*4;
+  const start = performance.now();
+  const duration = 1800;
+
+  function frame(now){
+    const t = Math.min(1,(now-start)/duration);
+    const ease = 1 - Math.pow(1-t,3);
+    const rot = spins*ease + targetAngle*ease;
+    drawStarterWheel(rot);
+    if(t<1) requestAnimationFrame(frame);
+    else {
+      drawStarterWheel(targetAngle);
+      if($("wheelResult")) $("wheelResult").textContent = `${winnerName} Starts!`;
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
+
+function renderLobbyRewrite(){
+  if(!latestState) return;
+
+  const allHumans = latestState.players.filter(p => !p.isBot);
+  const unseatedBox = $("lobbyUnseatedNames");
+  if(unseatedBox){
+    unseatedBox.innerHTML = allHumans.length
+      ? allHumans.map(p => `${p.isOwner ? "👑 " : ""}${escapeHtml(p.name)}${p.seatKey ? "" : " <small>(not seated)</small>"}`).join("<br>")
+      : "Waiting...";
+  }
+
+  document.querySelectorAll(".lobbySeat").forEach(btn => {
+    const seat = btn.dataset.seat;
+    const occupant = latestState.players.find(p => p.seatKey === seat);
+    const nameEl = btn.querySelector(".seatName");
+    const actionEl = btn.querySelector(".seatAction");
+
+    btn.classList.remove("occupied","botSeat","mySeat","emptySeat");
+    btn.disabled = false;
+
+    if(!occupant){
+      btn.classList.add("emptySeat");
+      nameEl.textContent = "Sit Here";
+      actionEl.textContent = "Tap to sit";
+    } else {
+      btn.classList.add("occupied");
+      if(occupant.isBot) btn.classList.add("botSeat");
+      if(occupant.id === myPlayerId) btn.classList.add("mySeat");
+
+      nameEl.textContent = occupant.name + (occupant.isBot ? " (Bot)" : "");
+      if(occupant.id === myPlayerId) actionEl.textContent = "You";
+      else if(occupant.isBot) actionEl.textContent = "Remove Bot";
+      else actionEl.textContent = "Taken";
+    }
+
+    const tableLabel = $(`seat${seat.charAt(0).toUpperCase()+seat.slice(1)}Label`);
+    if(tableLabel) tableLabel.textContent = occupant ? occupant.name.replace(" Bot","") : seat;
+  });
+
+  drawStarterWheel();
+}
+
+document.querySelectorAll(".lobbySeat").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if(!latestState) return;
+    const seatKey = btn.dataset.seat;
+    const occupant = latestState.players.find(p => p.seatKey === seatKey);
+    const roomCode = currentRoomCode || latestState.roomCode || localStorage.getItem(SESSION_ROOM_KEY);
+
+    if(occupant?.isBot){
+      socket.emit("removeSeatBot", { roomCode, seatKey });
+      return;
+    }
+
+    if(!occupant || occupant.id === myPlayerId){
+      socket.emit("chooseSeat", { roomCode, seatKey });
+    }
+  });
+});
