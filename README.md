@@ -1,11 +1,8 @@
-# Beaners v29 Stability Release
+# Beaners v30 Critical Turn/Reconnect Fixes
 
-Updates:
-- Compressed top-right Beaner indicator to just A, 2, 3 ... K.
-- Exit, restart and reconnect use stable player identity more reliably.
-- Restart restricted to room owner.
-- Add/fill bots restricted to room owner.
-- Ownership transfers if owner exits.
-- Toast feedback added for reconnect/restart/exit.
-- Hidden debug panel: tap room code 5 times.
-- Top bar kept to one line.
+Fixes:
+- Reconnect uses live room/player token first, then localStorage.
+- Server re-binds socket identity to the player token before turn checks.
+- Exit works by stable player token.
+- Final discard is allowed when you are down and have one card left.
+- Better not-your-turn resync behaviour.

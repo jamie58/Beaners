@@ -32,6 +32,7 @@ socket.on("rejoinFailed", () => {
 
 let currentRoomCode = null;
 let myPlayerId = null;
+let currentPlayerToken = null;
 let currentHand = [];
 let selectedCardIds = new Set();
 let latestState = null;
@@ -157,13 +158,16 @@ $("sortSuitBtn").onclick = () => {
 
 
 function reconnectToRoom(){
-  const roomCode = currentRoomCode || localStorage.getItem(SESSION_ROOM_KEY);
-  const playerToken = localStorage.getItem(SESSION_TOKEN_KEY);
+  const roomCode = currentRoomCode || latestState?.roomCode || localStorage.getItem(SESSION_ROOM_KEY);
+  const playerToken = currentPlayerToken || localStorage.getItem(SESSION_TOKEN_KEY);
 
   if(!roomCode || !playerToken){
-    alert("No saved room found to reconnect to.");
+    if(typeof showToast === "function") showToast("No saved room found");
+    else alert("No saved room found to reconnect to.");
     return;
   }
+
+  if(typeof showToast === "function") showToast("Reconnecting...");
 
   const btn = $("reconnectBtn");
   if(btn){
@@ -284,9 +288,10 @@ $("closeScorecard").onclick = () => hideScorecard();
 socket.on("joinedRoom", ({roomCode, playerId, playerToken}) => {
   currentRoomCode = roomCode;
   myPlayerId = playerId;
+  currentPlayerToken = playerToken || currentPlayerToken || localStorage.getItem(SESSION_TOKEN_KEY);
   localStorage.setItem(SESSION_ROOM_KEY, roomCode);
   localStorage.setItem(SESSION_PLAYER_KEY, playerId);
-  if (playerToken) localStorage.setItem(SESSION_TOKEN_KEY, playerToken);
+  if (playerToken) { currentPlayerToken = playerToken; localStorage.setItem(SESSION_TOKEN_KEY, playerToken); }
   $("roomCode").textContent = roomCode;
   $("lobby").classList.add("hidden");
   $("game").classList.remove("hidden");
@@ -355,8 +360,8 @@ socket.on("autoPlayResolved", ({cardId, meldId}) => playOnMeld(meldId, cardId));
 socket.on("errorMessage", message => {
   if(String(message).startsWith("Not your turn")){
     // Try to silently re-bind this browser to its saved player token, then show the message.
-    const savedRoom = currentRoomCode || localStorage.getItem(SESSION_ROOM_KEY);
-    const savedToken = localStorage.getItem(SESSION_TOKEN_KEY);
+    const savedRoom = currentRoomCode || latestState?.roomCode || localStorage.getItem(SESSION_ROOM_KEY);
+    const savedToken = currentPlayerToken || localStorage.getItem(SESSION_TOKEN_KEY);
     if(savedRoom && savedToken){
       socket.emit("rejoinRoom", { roomCode: savedRoom, playerToken: savedToken });
     }
