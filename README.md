@@ -1,10 +1,18 @@
-# Beaners v34 Sounds, Haptics & Animations
+# Beaners v35 Real Sound Files
 
-Adds:
-- Improved generated placeholder sound effects.
-- Stronger haptic patterns for pickup, discard, meld, turn, warning, urgent, pile pickup and Beaners.
-- Card fly animations from deck/discard to hand.
-- Card fly animations from hand to discard and melds.
-- Deal burst animation at the start of each round.
-- BEANERS celebration animation.
-- Drop-zone pulsing feedback.
+Updates:
+- Replaces placeholder sounds with supplied WAV files:
+  - beaners.wav
+  - deal.wav
+  - discard.wav
+  - pickup.wav
+  - pile.wav
+  - shuffle.wav
+
+Still keeps generated placeholder sounds for:
+  - meld.wav
+  - scorecard.wav
+  - swap.wav
+  - turn.wav
+  - urgent.wav
+  - warning.wav
