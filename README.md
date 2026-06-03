@@ -1,8 +1,9 @@
-# Beaners v30 Critical Turn/Reconnect Fixes
+# Beaners v32 Session Stability Fix
 
-Fixes:
-- Reconnect uses live room/player token first, then localStorage.
-- Server re-binds socket identity to the player token before turn checks.
-- Exit works by stable player token.
-- Final discard is allowed when you are down and have one card left.
-- Better not-your-turn resync behaviour.
+Critical fixes:
+- Exit now finds the live room by socket/token if the client room code is stale.
+- Restart uses the same live-room fallback.
+- Reconnect uses currentRoomCode/latestState before localStorage.
+- Server binds every action to the stable player token before checking turn ownership.
+- Final discard remains guaranteed when the player is down with one card left.
+- Removes misleading room-not-found behaviour while the player is visibly in a room.

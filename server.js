@@ -331,27 +331,6 @@ function endRound(roomCode, winnerId){
   }
 }
 
-function bindSocketToPlayer(room, socket){
-  if(!room || !socket) return null;
-
-  let player = room.players.find(p => p.id === socket.id && !p.isBot);
-
-  if(!player && socket.data?.playerToken){
-    player = room.players.find(p => p.token === socket.data.playerToken && !p.isBot);
-  }
-
-  if(player){
-    const oldId = player.id;
-    player.id = socket.id;
-    player.disconnected = false;
-
-    for(const meld of room.tableMelds || []){
-      if(meld.ownerId === oldId) meld.ownerId = socket.id;
-    }
-  }
-
-  return player || null;
-}
 
 function getPlayer(room, id){
   return room.players.find(p => p.id === id) || null;
@@ -391,10 +370,6 @@ function currentSocketPlayer(room, socket){
   return room.players[room.currentPlayerIndex];
 }
 
-function notYourTurnMessage(room){
-  const current = room.players[room.currentPlayerIndex];
-  return `Not your turn. Server thinks it is ${current?.name || "someone"}'s turn.`;
-}
 
 function findFirstValidMeld(hand, round){
   for(let a=0;a<hand.length;a++) for(let b=a+1;b<hand.length;b++) for(let c=b+1;c<hand.length;c++){
@@ -524,6 +499,93 @@ function addBot(room){
 
 
 
+
+
+
+function findPlayerBySocketOrToken(room, socket){
+  if(!room || !socket) return null;
+  let player = room.players.find(p => p.id === socket.id && !p.isBot);
+  if(!player && socket.data?.playerToken){
+    player = room.players.find(p => p.token === socket.data.playerToken && !p.isBot);
+    if(player){
+      const oldId = player.id;
+      player.id = socket.id;
+      player.disconnected = false;
+      for(const meld of room.tableMelds){
+        if(meld.ownerId === oldId) meld.ownerId = socket.id;
+      }
+    }
+  }
+  return player;
+}
+
+
+
+function resolveRoomCode(roomCode){
+  return String(roomCode || "").replace(/\D/g, "").trim();
+}
+
+function findRoomBySocket(socket){
+  for(const [roomCode, room] of Object.entries(rooms)){
+    if(room.players.some(p => p.id === socket.id || (!p.isBot && socket.data?.playerToken && p.token === socket.data.playerToken))){
+      return { roomCode, room };
+    }
+  }
+  return { roomCode:null, room:null };
+}
+
+function bindSocketToPlayer(room, socket){
+  if(!room || !socket) return null;
+
+  let player = room.players.find(p => p.id === socket.id && !p.isBot);
+
+  if(!player && socket.data?.playerToken){
+    player = room.players.find(p => p.token === socket.data.playerToken && !p.isBot);
+  }
+
+  if(player){
+    const oldId = player.id;
+    player.id = socket.id;
+    player.disconnected = false;
+
+    for(const meld of room.tableMelds || []){
+      if(meld.ownerId === oldId) meld.ownerId = socket.id;
+    }
+  }
+
+  return player || null;
+}
+
+function getActingPlayer(room, socket){
+  return bindSocketToPlayer(room, socket);
+}
+
+function getCurrentTurnPlayer(room, socket){
+  const current = room.players[room.currentPlayerIndex];
+  if(!current) return null;
+
+  if(current.id === socket.id) return current;
+
+  if(socket.data?.playerToken && current.token === socket.data.playerToken){
+    const oldId = current.id;
+    current.id = socket.id;
+    current.disconnected = false;
+
+    for(const meld of room.tableMelds || []){
+      if(meld.ownerId === oldId) meld.ownerId = socket.id;
+    }
+
+    return current;
+  }
+
+  return null;
+}
+
+function notYourTurnMessage(room){
+  const current = room.players[room.currentPlayerIndex];
+  return `Not your turn. Server thinks it is ${current?.name || "someone"}'s turn.`;
+}
+
 function getHumanPlayers(room){
   return room.players.filter(p => !p.isBot);
 }
@@ -546,23 +608,6 @@ function ensureOwner(room){
 function isOwner(room, socket){
   const owner = ensureOwner(room);
   return !!owner && socket.data?.playerToken === owner.token;
-}
-
-function findPlayerBySocketOrToken(room, socket){
-  if(!room || !socket) return null;
-  let player = room.players.find(p => p.id === socket.id && !p.isBot);
-  if(!player && socket.data?.playerToken){
-    player = room.players.find(p => p.token === socket.data.playerToken && !p.isBot);
-    if(player){
-      const oldId = player.id;
-      player.id = socket.id;
-      player.disconnected = false;
-      for(const meld of room.tableMelds){
-        if(meld.ownerId === oldId) meld.ownerId = socket.id;
-      }
-    }
-  }
-  return player;
 }
 
 function emitToast(roomCode, message){
@@ -715,7 +760,7 @@ io.on("connection", socket => {
 
   socket.on("layMeld", ({roomCode, cardIds}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
-    const player=getSocketPlayer(room,socket); if(!player) return;
+    const player=getActingPlayer(room,socket); if(!player) return;
     if(!Array.isArray(cardIds) || cardIds.length<3) return socket.emit("errorMessage","A meld needs at least 3 cards.");
     const cards=[];
     for(const id of cardIds){ const card=player.hand.find(c=>c.id===id); if(!card) return socket.emit("errorMessage","Card not found."); cards.push(card); }
@@ -727,7 +772,7 @@ io.on("connection", socket => {
 
   socket.on("playOnMeld", ({roomCode, meldId, cardId, swapBeaner}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
-    const player=getSocketPlayer(room,socket); if(!player) return;
+    const player=getActingPlayer(room,socket); if(!player) return;
     if(!player.isDown) return socket.emit("errorMessage","You need to be down before adding to melds.");
     const meld=room.tableMelds.find(m=>m.id===meldId);
     const card=player.hand.find(c=>c.id===cardId);
@@ -798,17 +843,17 @@ io.on("connection", socket => {
   });
 
   socket.on("rejoinRoom", ({ roomCode, playerToken }) => {
-    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
+    roomCode = resolveRoomCode(roomCode);
     const room = rooms[roomCode];
 
     if(!room || !playerToken){
-      socket.emit("rejoinFailed");
+      socket.emit("rejoinFailed", { reason:"room_or_token_missing" });
       return;
     }
 
     const player = room.players.find(p => p.token === playerToken && !p.isBot);
     if(!player){
-      socket.emit("rejoinFailed");
+      socket.emit("rejoinFailed", { reason:"player_not_found" });
       return;
     }
 
@@ -829,9 +874,16 @@ io.on("connection", socket => {
 
 
   socket.on("restartGame", ({ roomCode }) => {
-    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
-    const room = rooms[roomCode];
-    if(!room) return socket.emit("errorMessage","Room not found.");
+    roomCode = resolveRoomCode(roomCode);
+    let room = rooms[roomCode];
+
+    if(!room){
+      const found = findRoomBySocket(socket);
+      roomCode = found.roomCode;
+      room = found.room;
+    }
+
+    if(!room || !roomCode) return socket.emit("errorMessage","Could not find active room to restart.");
     if(!isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can restart the game.");
 
     if(room.autoNextRoundTimer) clearTimeout(room.autoNextRoundTimer);
@@ -864,11 +916,19 @@ io.on("connection", socket => {
 
 
   socket.on("exitGame", ({ roomCode }) => {
-    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
-    const room = rooms[roomCode];
-    if(!room) return socket.emit("errorMessage","Room not found.");
+    roomCode = resolveRoomCode(roomCode);
+    let room = rooms[roomCode];
 
-    const player = findPlayerBySocketOrToken(room, socket);
+    // Fallback: if client roomCode is stale/missing, find the room by socket or token.
+    if(!room){
+      const found = findRoomBySocket(socket);
+      roomCode = found.roomCode;
+      room = found.room;
+    }
+
+    if(!room || !roomCode) return socket.emit("errorMessage","Could not find your active room to exit.");
+
+    const player = getActingPlayer(room, socket);
     if(!player) return socket.emit("errorMessage","Could not find your seat to exit.");
 
     const idx = room.players.findIndex(p => p.id === player.id || (!p.isBot && p.token === player.token));
@@ -891,16 +951,16 @@ io.on("connection", socket => {
       if(meld.ownerId === old.id) meld.ownerId = room.players[idx].id;
     }
 
-    if(room.ownerToken === old.token && typeof ensureOwner === "function"){
+    if(room.ownerToken === old.token){
       room.ownerToken = null;
       const newOwner = ensureOwner(room);
-      if(newOwner) io.to(roomCode).emit("toast", { message: `Room owner transferred to ${newOwner.name}` });
+      if(newOwner) emitToast(roomCode, `Room owner transferred to ${newOwner.name}`);
     }
 
     socket.leave(roomCode);
     socket.emit("exitedGame");
     emitRoom(roomCode);
-    io.to(roomCode).emit("toast", { message: `${old.name} left — bot took over` });
+    emitToast(roomCode, `${old.name} left — bot took over`);
     maybeRunBotTurn(roomCode);
   });
 

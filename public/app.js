@@ -191,11 +191,14 @@ function reconnectToRoom(){
   }, 150);
 }
 
+
 function doExitGame(){
   if(confirm("Exit game? A bot will take over your seat.")){
-    socket.emit("exitGame", { roomCode: currentRoomCode });
+    const roomCode = currentRoomCode || latestState?.roomCode || localStorage.getItem(SESSION_ROOM_KEY);
+    socket.emit("exitGame", { roomCode });
   }
 }
+
 
 if ($("exitGameBtn")) $("exitGameBtn").onclick = doExitGame;
 if ($("exitGameBtn2")) $("exitGameBtn2").onclick = doExitGame;
@@ -271,8 +274,16 @@ $("layMeldBtn").onclick = () => {
 };
 
 $("discardBtn").onclick = () => {
-  const ids = [...selectedCardIds];
+  let ids = [...selectedCardIds];
+
+  // Beaners finish rule: if you have only one card left, Discard should use that card
+  // even if mobile selection state has glitched.
+  if(ids.length !== 1 && currentHand.length === 1){
+    ids = [currentHand[0].id];
+  }
+
   if(ids.length !== 1) return alert("Select exactly 1 card to discard.");
+
   playSound("discard"); vibrate(25);
   socket.emit("discardCard", { roomCode: currentRoomCode, cardId: ids[0] });
   selectedCardIds.clear();
@@ -288,6 +299,7 @@ $("closeScorecard").onclick = () => hideScorecard();
 socket.on("joinedRoom", ({roomCode, playerId, playerToken}) => {
   currentRoomCode = roomCode;
   myPlayerId = playerId;
+  currentPlayerToken = playerToken || currentPlayerToken || localStorage.getItem(SESSION_TOKEN_KEY);
   currentPlayerToken = playerToken || currentPlayerToken || localStorage.getItem(SESSION_TOKEN_KEY);
   localStorage.setItem(SESSION_ROOM_KEY, roomCode);
   localStorage.setItem(SESSION_PLAYER_KEY, playerId);
@@ -368,7 +380,7 @@ socket.on("errorMessage", message => {
   }
 
   if(message === "Room not found."){
-    alert("Room not found. Check the 4-digit JOIN CODE, and make sure everyone is using the same Render link. If the host's free Render server restarted, create a new room.");
+    alert("Room not found. The server may have restarted, or the room code is no longer active.");
   } else {
     alert(message);
   }
@@ -557,8 +569,14 @@ function renderHand(){
     el.draggable = true;
     el.dataset.cardId = card.id;
     el.onclick = () => {
-      if(selectedCardIds.has(card.id)) selectedCardIds.delete(card.id);
-      else selectedCardIds.add(card.id);
+      if(currentHand.length === 1){
+        selectedCardIds.clear();
+        selectedCardIds.add(card.id);
+      } else if(selectedCardIds.has(card.id)) {
+        selectedCardIds.delete(card.id);
+      } else {
+        selectedCardIds.add(card.id);
+      }
       renderHand();
     };
     el.ondblclick = () => socket.emit("autoPlayCard", { roomCode: currentRoomCode, cardId: card.id });
