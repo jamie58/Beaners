@@ -113,6 +113,18 @@ let handSortMode = localStorage.getItem('beanersSortMode') || 'none';
 
 const $ = id => document.getElementById(id);
 
+function showToast(message){
+  const el = $("toast");
+  if(!el) return;
+  el.textContent = message;
+  el.classList.remove("hidden");
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => el.classList.add("hidden"), 2200);
+}
+
+socket.on("toast", ({message}) => showToast(message));
+
+
 $("createBtn").onclick = () => socket.emit("createRoom", { 
   name: $("nameInput").value.trim() || "Player",
   playerToken: localStorage.getItem(SESSION_TOKEN_KEY)
@@ -188,6 +200,7 @@ if ($("reconnectBtn")) $("reconnectBtn").onclick = reconnectToRoom;
 
 if ($("restartGameBtn")) $("restartGameBtn").onclick = () => {
   if(confirm("Restart this game and return everyone to the lobby?")){
+    showToast("Restart sent...");
     socket.emit("restartGame", { roomCode: currentRoomCode });
   }
 };
@@ -340,6 +353,15 @@ socket.on("chooseMeldForCard", ({cardId, meldIds}) => {
 
 socket.on("autoPlayResolved", ({cardId, meldId}) => playOnMeld(meldId, cardId));
 socket.on("errorMessage", message => {
+  if(String(message).startsWith("Not your turn")){
+    // Try to silently re-bind this browser to its saved player token, then show the message.
+    const savedRoom = currentRoomCode || localStorage.getItem(SESSION_ROOM_KEY);
+    const savedToken = localStorage.getItem(SESSION_TOKEN_KEY);
+    if(savedRoom && savedToken){
+      socket.emit("rejoinRoom", { roomCode: savedRoom, playerToken: savedToken });
+    }
+  }
+
   if(message === "Room not found."){
     alert("Room not found. Check the 4-digit JOIN CODE, and make sure everyone is using the same Render link. If the host's free Render server restarted, create a new room.");
   } else {
@@ -396,7 +418,7 @@ function renderState(){
 
   if ($("copyRoomBtn")) $("copyRoomBtn").textContent = state.roomCode;
   if ($("bigJoinCode")) $("bigJoinCode").textContent = state.roomCode;
-  if ($("compactBeaner")) $("compactBeaner").textContent = `R${state.round} • Beaner ${state.beaner}`;
+  if ($("compactBeaner")) $("compactBeaner").textContent = state.beaner;
   $("roundNo").textContent = state.round;
   $("beanerRank").textContent = state.beaner;
   $("deckCount").textContent = state.deckCount;
@@ -890,4 +912,38 @@ function hideScorecard(){
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+
+
+let roomCodeTapCount = 0;
+let roomCodeTapTimer = null;
+
+if($("copyRoomBtn")){
+  $("copyRoomBtn").addEventListener("click", () => {
+    roomCodeTapCount++;
+    clearTimeout(roomCodeTapTimer);
+    roomCodeTapTimer = setTimeout(() => roomCodeTapCount = 0, 1500);
+    if(roomCodeTapCount >= 5){
+      roomCodeTapCount = 0;
+      toggleDebugPanel();
+    }
+  });
+}
+
+function toggleDebugPanel(){
+  const panel = $("debugPanel");
+  if(!panel || !latestState) return;
+  const me = latestState.players?.find(p => p.id === myPlayerId);
+  const current = latestState.players?.[latestState.currentPlayerIndex];
+  const token = localStorage.getItem(SESSION_TOKEN_KEY) || "";
+  panel.innerHTML = `
+    <strong>Beaners Debug</strong><br>
+    Room: ${currentRoomCode || "-"}<br>
+    Socket: ${socket.connected ? "Connected" : "Disconnected"}<br>
+    You: ${me?.name || "-"}<br>
+    Turn: ${current?.name || "-"}<br>
+    Owner: ${latestState.players?.find(p => p.isOwner)?.name || "-"}<br>
+    Token: ${token.slice(0,10)}...
+  `;
+  panel.classList.toggle("hidden");
 }

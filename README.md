@@ -1,8 +1,11 @@
-# Beaners v27
+# Beaners v29 Stability Release
 
 Updates:
-- Restores a purple branded loading/splash screen.
-- Splash screen uses the supplied app icon.
-- Lobby branding now matches the app icon/purple theme.
-- Top Beaners logo now uses the app icon styling.
-- Purple/gold visual theme applied across the app shell.
+- Compressed top-right Beaner indicator to just A, 2, 3 ... K.
+- Exit, restart and reconnect use stable player identity more reliably.
+- Restart restricted to room owner.
+- Add/fill bots restricted to room owner.
+- Ownership transfers if owner exits.
+- Toast feedback added for reconnect/restart/exit.
+- Hidden debug panel: tap room code 5 times.
+- Top bar kept to one line.

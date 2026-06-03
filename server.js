@@ -282,8 +282,9 @@ function publicRoomState(roomCode){
     winnerMessage: room.winnerMessage || "",
     turnStartedAt: room.turnStartedAt || null,
     roundScores: room.roundScores || [],
+    ownerToken: room.ownerToken || null,
     players: room.players.map((p,i)=>({
-      id:p.id, name:p.name, cardCount:p.hand.length, totalScore:p.totalScore,
+      id:p.id, name:p.name, isOwner:p.token === room.ownerToken, cardCount:p.hand.length, totalScore:p.totalScore,
       lastRoundScore:p.lastRoundScore, isDown:p.isDown, isBot:!!p.isBot, disconnected:!!p.disconnected, hasPickedUp:!!p.hasPickedUp, seatKey:p.seatKey || null, avgTurnSeconds: averageTurnSeconds(p), turnCount:p.turnCount || 0, index:i
     })),
     tableMelds: room.tableMelds.map(m=>({
@@ -330,7 +331,51 @@ function endRound(roomCode, winnerId){
   }
 }
 
-function getPlayer(room, id){ return room.players.find(p=>p.id===id); }
+function getPlayer(room, id){
+  const token = this?.data?.playerToken;
+  return room.players.find(p => p.id === id) || (token ? room.players.find(p => p.token === token && !p.isBot) : null);
+}
+
+function getSocketPlayer(room, socket){
+  if(!room || !socket) return null;
+  let player = room.players.find(p => p.id === socket.id && !p.isBot);
+  if(!player && socket.data?.playerToken){
+    player = room.players.find(p => p.token === socket.data.playerToken && !p.isBot);
+    if(player){
+      const oldId = player.id;
+      player.id = socket.id;
+      player.disconnected = false;
+      for(const meld of room.tableMelds){
+        if(meld.ownerId === oldId) meld.ownerId = socket.id;
+      }
+    }
+  }
+  return player;
+}
+
+function isPlayersTurn(room, socket){
+  const current = room.players[room.currentPlayerIndex];
+  if(!current) return false;
+
+  if(current.id === socket.id) return true;
+
+  if(socket.data?.playerToken && current.token === socket.data.playerToken){
+    const oldId = current.id;
+    current.id = socket.id;
+    current.disconnected = false;
+    for(const meld of room.tableMelds){
+      if(meld.ownerId === oldId) meld.ownerId = socket.id;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+function currentSocketPlayer(room, socket){
+  if(!isPlayersTurn(room, socket)) return null;
+  return room.players[room.currentPlayerIndex];
+}
 
 function findFirstValidMeld(hand, round){
   for(let a=0;a<hand.length;a++) for(let b=a+1;b<hand.length;b++) for(let c=b+1;c<hand.length;c++){
@@ -459,11 +504,58 @@ function addBot(room){
 }
 
 
+
+function getHumanPlayers(room){
+  return room.players.filter(p => !p.isBot);
+}
+
+function ensureOwner(room){
+  if(!room) return null;
+  const humans = getHumanPlayers(room);
+  if(!humans.length){
+    room.ownerToken = null;
+    return null;
+  }
+
+  const currentOwner = humans.find(p => p.token === room.ownerToken);
+  if(currentOwner) return currentOwner;
+
+  room.ownerToken = humans[0].token;
+  return humans[0];
+}
+
+function isOwner(room, socket){
+  const owner = ensureOwner(room);
+  return !!owner && socket.data?.playerToken === owner.token;
+}
+
+function findPlayerBySocketOrToken(room, socket){
+  if(!room || !socket) return null;
+  let player = room.players.find(p => p.id === socket.id && !p.isBot);
+  if(!player && socket.data?.playerToken){
+    player = room.players.find(p => p.token === socket.data.playerToken && !p.isBot);
+    if(player){
+      const oldId = player.id;
+      player.id = socket.id;
+      player.disconnected = false;
+      for(const meld of room.tableMelds){
+        if(meld.ownerId === oldId) meld.ownerId = socket.id;
+      }
+    }
+  }
+  return player;
+}
+
+function emitToast(roomCode, message){
+  io.to(roomCode).emit("toast", { message });
+}
+
 io.on("connection", socket => {
   socket.on("createRoom", ({name, playerToken}) => {
     const roomCode=createRoomCode();
     const token = playerToken || createPlayerToken();
-    rooms[roomCode]={players:[{id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false,hasPickedUp:false,hasPickedUp:false,seatKey:null}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:"",roundScores:[]};
+    rooms[roomCode]={players:[{id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false,hasPickedUp:false,hasPickedUp:false,seatKey:null}],deck:[],discardPile:[],tableMelds:[],phase:"lobby",round:1,starterIndex:0,currentPlayerIndex:0,winnerMessage:"",roundScores:[],ownerToken:token};
+    socket.data.playerToken = token;
     socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token}); emitRoom(roomCode);
   });
 
@@ -479,6 +571,7 @@ io.on("connection", socket => {
       existing.disconnected = false;
       if(name) existing.name = cleanName(name);
       for(const meld of room.tableMelds){ if(meld.ownerId === oldId) meld.ownerId = socket.id; }
+      socket.data.playerToken = token;
       socket.join(roomCode);
       socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
       emitRoom(roomCode);
@@ -488,11 +581,13 @@ io.on("connection", socket => {
     if(room.phase!=="lobby") return socket.emit("errorMessage","Game already started.");
     if(room.players.length>=4) return socket.emit("errorMessage","Room is full.");
     room.players.push({id:socket.id,token,name:cleanName(name),hand:[],isDown:false,totalScore:0,lastRoundScore:null,isBot:false,disconnected:false,hasPickedUp:false,hasPickedUp:false,seatKey:null});
+    socket.data.playerToken = token;
     socket.join(roomCode); socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token}); emitRoom(roomCode);
   });
 
   socket.on("addBot", ({roomCode})=>{
     const room=rooms[roomCode];
+    if(room && !isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can add bots.");
     if(!room || room.phase!=="lobby") return;
     if(room.players.length>=4) return socket.emit("errorMessage","Room is already full.");
     if(!addBot(room)) return socket.emit("errorMessage","No empty seats available.");
@@ -500,6 +595,7 @@ io.on("connection", socket => {
   });
   socket.on("fillBots", ({roomCode})=>{
     const room=rooms[roomCode];
+    if(room && !isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can fill bot seats.");
     if(!room || room.phase!=="lobby") return;
     while(room.players.length<4){
       if(!addBot(room)) break;
@@ -562,8 +658,8 @@ io.on("connection", socket => {
 
   socket.on("drawFromDeck", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
-    const current=room.players[room.currentPlayerIndex];
-    if(!current || current.id!==socket.id) return socket.emit("errorMessage","Not your turn.");
+    const current=currentSocketPlayer(room, socket);
+    if(!current) return socket.emit("errorMessage",`Not your turn. Server thinks it is ${room.players[room.currentPlayerIndex]?.name || "someone"}\'s turn.`);
     if(current.hasPickedUp) return socket.emit("errorMessage","You have already picked up this turn. Play cards, then discard.");
     if(!recycleDiscardIntoDeck(room)) return socket.emit("errorMessage","Deck and discard pile are empty.");
     current.hand.push(room.deck.pop());
@@ -573,8 +669,8 @@ io.on("connection", socket => {
 
   socket.on("takeTopDiscard", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
-    const current=room.players[room.currentPlayerIndex];
-    if(!current || current.id!==socket.id) return socket.emit("errorMessage","Not your turn.");
+    const current=currentSocketPlayer(room, socket);
+    if(!current) return socket.emit("errorMessage",`Not your turn. Server thinks it is ${room.players[room.currentPlayerIndex]?.name || "someone"}\'s turn.`);
     if(current.hasPickedUp) return socket.emit("errorMessage","You have already picked up this turn. Play cards, then discard.");
     if(!room.discardPile.length) return socket.emit("errorMessage","Discard pile is empty.");
     current.hand.push(room.discardPile.pop());
@@ -584,8 +680,8 @@ io.on("connection", socket => {
 
   socket.on("takeAllDiscard", ({roomCode}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
-    const current=room.players[room.currentPlayerIndex];
-    if(!current || current.id!==socket.id) return socket.emit("errorMessage","Not your turn.");
+    const current=currentSocketPlayer(room, socket);
+    if(!current) return socket.emit("errorMessage",`Not your turn. Server thinks it is ${room.players[room.currentPlayerIndex]?.name || "someone"}\'s turn.`);
     if(current.hasPickedUp) return socket.emit("errorMessage","You have already picked up this turn. Play cards, then discard.");
     if(!room.discardPile.length) return socket.emit("errorMessage","Discard pile is empty.");
     current.hand.push(...room.discardPile.splice(0));
@@ -595,7 +691,7 @@ io.on("connection", socket => {
 
   socket.on("layMeld", ({roomCode, cardIds}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
-    const player=getPlayer(room,socket.id); if(!player) return;
+    const player=getSocketPlayer(room,socket); if(!player) return;
     if(!Array.isArray(cardIds) || cardIds.length<3) return socket.emit("errorMessage","A meld needs at least 3 cards.");
     const cards=[];
     for(const id of cardIds){ const card=player.hand.find(c=>c.id===id); if(!card) return socket.emit("errorMessage","Card not found."); cards.push(card); }
@@ -607,7 +703,7 @@ io.on("connection", socket => {
 
   socket.on("playOnMeld", ({roomCode, meldId, cardId, swapBeaner}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
-    const player=getPlayer(room,socket.id); if(!player) return;
+    const player=getSocketPlayer(room,socket); if(!player) return;
     if(!player.isDown) return socket.emit("errorMessage","You need to be down before adding to melds.");
     const meld=room.tableMelds.find(m=>m.id===meldId);
     const card=player.hand.find(c=>c.id===cardId);
@@ -656,8 +752,8 @@ io.on("connection", socket => {
 
   socket.on("discardCard", ({roomCode,cardId}) => {
     const room=rooms[roomCode]; if(!room || room.phase!=="playing") return;
-    const current=room.players[room.currentPlayerIndex];
-    if(!current || current.id!==socket.id) return socket.emit("errorMessage","Not your turn.");
+    const current=currentSocketPlayer(room, socket);
+    if(!current) return socket.emit("errorMessage",`Not your turn. Server thinks it is ${room.players[room.currentPlayerIndex]?.name || "someone"}\'s turn.`);
     if(!current.hasPickedUp) return socket.emit("errorMessage","You must pick up before discarding.");
     const idx=current.hand.findIndex(c=>c.id===cardId); if(idx<0) return socket.emit("errorMessage","Card not found.");
     finishTurnTimer(room, current);
@@ -698,17 +794,21 @@ io.on("connection", socket => {
       if (meld.ownerId === oldId) meld.ownerId = socket.id;
     }
 
+    socket.data.playerToken = playerToken;
     socket.join(roomCode);
     socket.emit("joinedRoom", { roomCode, playerId: socket.id, playerToken });
     emitRoom(roomCode);
+    socket.emit("toast", { message: "Connected" });
   });
 
 
 
 
   socket.on("restartGame", ({ roomCode }) => {
-    const room = rooms[String(roomCode || "").replace(/\D/g, "").trim()];
-    if(!room) return;
+    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
+    const room = rooms[roomCode];
+    if(!room) return socket.emit("errorMessage","Room not found.");
+    if(!isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can restart the game.");
 
     if(room.autoNextRoundTimer) clearTimeout(room.autoNextRoundTimer);
 
@@ -733,15 +833,22 @@ io.on("connection", socket => {
       p.turnCount = 0;
     }
 
+    ensureOwner(room);
     emitRoom(roomCode);
+    emitToast(roomCode, "Game restarted");
   });
 
-  socket.on("exitGame", ({ roomCode }) => {
-    const room = rooms[String(roomCode || "").trim()];
-    if(!room) return;
 
-    const idx = room.players.findIndex(p => p.id === socket.id && !p.isBot);
-    if(idx < 0) return;
+  socket.on("exitGame", ({ roomCode }) => {
+    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
+    const room = rooms[roomCode];
+    if(!room) return socket.emit("errorMessage","Room not found.");
+
+    const player = findPlayerBySocketOrToken(room, socket);
+    if(!player) return socket.emit("errorMessage","Could not find your seat to exit.");
+
+    const idx = room.players.findIndex(p => p.id === player.id || (!p.isBot && p.token === player.token));
+    if(idx < 0) return socket.emit("errorMessage","Could not find your seat to exit.");
 
     const old = room.players[idx];
     const botName = `${old.name} Bot`;
@@ -760,11 +867,19 @@ io.on("connection", socket => {
       if(meld.ownerId === old.id) meld.ownerId = room.players[idx].id;
     }
 
+    if(room.ownerToken === old.token){
+      room.ownerToken = null;
+      const newOwner = ensureOwner(room);
+      if(newOwner) emitToast(roomCode, `Room owner transferred to ${newOwner.name}`);
+    }
+
     socket.leave(roomCode);
     socket.emit("exitedGame");
     emitRoom(roomCode);
+    emitToast(roomCode, `${old.name} left — bot took over`);
     maybeRunBotTurn(roomCode);
   });
+
 
   socket.on("disconnect", () => {
     for(const [roomCode,room] of Object.entries(rooms)){

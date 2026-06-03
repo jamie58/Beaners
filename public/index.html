@@ -31,7 +31,7 @@
 
       <div class="rightTopGroup">
         <button id="reconnectBtn" class="reconnectBtn hidden" title="Refresh / reconnect">⟳</button>
-        <div id="compactBeaner" class="beanerPill">R1 • Beaner A</div>
+        <div id="compactBeaner" class="beanerPill compactBeanerOnly">A</div>
         <button id="soundToggleBtn" class="soundBtn" title="Sound on/off">🔊</button>
       </div>
     </header>
@@ -168,5 +168,7 @@
   <div id="fxLayer" class="fxLayer"></div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/app.js"></script>
+  <div id="toast" class="toast hidden"></div>
+  <div id="debugPanel" class="debugPanel hidden"></div>
 </body>
 </html>
