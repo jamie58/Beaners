@@ -2543,3 +2543,110 @@ body{
   outline:5px solid #f8c84a !important;
   box-shadow:0 0 0 3px rgba(248,200,74,.35), 0 8px 18px rgba(0,0,0,.25) !important;
 }
+
+
+/* v34 card animation polish */
+.cardFxLayer{
+  pointer-events:none;
+  position:fixed;
+  inset:0;
+  z-index:20000;
+  overflow:hidden;
+}
+
+.flyingGameCard{
+  position:fixed;
+  width:44px;
+  height:60px;
+  margin-left:-22px;
+  margin-top:-30px;
+  border-radius:8px;
+  background:linear-gradient(180deg,#ffffff,#f5f5f4);
+  border:2px solid #1c1917;
+  color:#1c1917;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:1000;
+  font-size:18px;
+  box-shadow:0 10px 22px rgba(0,0,0,.28);
+  transform:translate(0,0) scale(1) rotate(-4deg);
+  opacity:1;
+  transition:transform .48s cubic-bezier(.2,.8,.2,1), opacity .48s ease;
+  will-change:transform,opacity;
+}
+
+.flyingGameCard.dealFx{
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,.95) 0 5%, transparent 6% 100%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.35) 0 2px, transparent 2px 5px),
+    #dc2626;
+  border:2px solid white;
+  color:transparent;
+}
+
+.flyingGameCard.drawFx{
+  border-color:#f8c84a;
+  box-shadow:0 0 0 3px rgba(248,200,74,.28),0 12px 24px rgba(0,0,0,.30);
+}
+
+.beanersBurst{
+  position:fixed;
+  left:50%;
+  top:42%;
+  transform:translate(-50%,-50%) scale(.7);
+  z-index:20001;
+  color:#fff7ed;
+  background:linear-gradient(135deg,#7c3aed,#3b1d77);
+  border:3px solid #f8c84a;
+  border-radius:28px;
+  padding:18px 28px;
+  font-size:34px;
+  font-weight:1000;
+  letter-spacing:1px;
+  text-shadow:0 4px 0 rgba(0,0,0,.35);
+  box-shadow:0 18px 60px rgba(0,0,0,.45);
+  animation:beanersPop 1.35s ease forwards;
+}
+
+@keyframes beanersPop{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.55) rotate(-4deg)}
+  18%{opacity:1;transform:translate(-50%,-50%) scale(1.08) rotate(2deg)}
+  35%{transform:translate(-50%,-50%) scale(.98) rotate(-1deg)}
+  78%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-56%) scale(.9)}
+}
+
+.hand .card{
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+
+.hand .card:active{
+  transform:translateY(-8px) scale(1.04);
+}
+
+.meld.dragOver,
+.discardDrop.dragOver{
+  animation:dropPulse .55s ease infinite alternate;
+}
+
+@keyframes dropPulse{
+  from{box-shadow:0 0 0 0 rgba(248,200,74,.25)}
+  to{box-shadow:0 0 0 6px rgba(248,200,74,.42)}
+}
+
+@media(max-width:850px){
+  .flyingGameCard{
+    width:36px;
+    height:50px;
+    margin-left:-18px;
+    margin-top:-25px;
+    font-size:15px;
+  }
+
+  .beanersBurst{
+    font-size:26px;
+    padding:14px 22px;
+    border-radius:22px;
+  }
+}
