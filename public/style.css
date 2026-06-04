@@ -62,7 +62,8 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
 .melds{flex:1;display:flex;gap:8px;flex-wrap:wrap;align-content:flex-start;overflow:auto;padding:4px}
 .meld{background:rgba(255,250,240,.12);border:2px solid rgba(248,200,74,.5);border-radius:14px;padding:6px}
 .meldOwner{font-size:11px;font-weight:900;margin-bottom:4px}
-.meldCards{display:flex;gap:3px}
+.meldCards{display:flex;gap:3px;flex-wrap:nowrap;width:100%;max-width:100%;overflow:hidden}
+.meldCards .card{flex:0 1 auto}
 .handPanel{background:#fffaf0;color:#24104f;border-radius:18px;padding:8px}
 .hand{display:flex;gap:6px;overflow-x:auto;padding:4px 4px 10px}
 .actions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
@@ -830,4 +831,16 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
 /* v66 Beaner swap rules */
 .beanerCard{
   position:relative;
+}
+
+
+/* V68 responsive meld card fitting */
+.meld{max-width:100%;overflow:hidden}
+.meldCards{container-type:inline-size}
+.meldCards .card{width:clamp(34px, 16cqw, 58px);height:calc(clamp(34px, 16cqw, 58px) * 1.414);min-width:0}
+.meldCards .card strong{font-size:clamp(13px, 6cqw, 22px)}
+.meldCards .card span{font-size:clamp(16px, 7cqw, 28px)}
+@media (max-width:768px){
+  .meldCards{gap:2px}
+  .side .meldCards .card{width:clamp(30px, 13cqw, 46px);height:calc(clamp(30px, 13cqw, 46px) * 1.414)}
 }
