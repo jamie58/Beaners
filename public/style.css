@@ -2766,3 +2766,108 @@ body:has(#lobbyControls:not(.hidden)) #playingControls{
 .lobbySeat.botSeat .seatAction{
   color:#fca5a5;
 }
+
+/* v42 lobby click/readability fix */
+body.inLobbyMode #playingControls,
+body.inLobbyMode .handPanel,
+body.inLobbyMode #handPanel,
+body.inLobbyMode .playerHand,
+body.inLobbyMode .actionsPanel{
+  display:none !important;
+}
+
+body.inLobbyMode #game{
+  padding-bottom:0 !important;
+}
+
+.lobbyCard{
+  overflow:visible !important;
+}
+
+.seatMap{
+  overflow:visible !important;
+}
+
+.lobbyTableCircle{
+  pointer-events:none !important;
+  z-index:2 !important;
+}
+
+.lobbySeat{
+  z-index:5 !important;
+  overflow:visible !important;
+  cursor:pointer !important;
+  touch-action:manipulation !important;
+}
+
+.seatMapLeft,
+.seatMapRight{
+  overflow:visible !important;
+}
+
+.seatMapLeft .seatName,
+.seatMapLeft .seatAction,
+.seatMapRight .seatName,
+.seatMapRight .seatAction{
+  transform:none !important;
+}
+
+.seatMapLeft .seatName,
+.seatMapRight .seatName{
+  writing-mode:horizontal-tb !important;
+  white-space:nowrap;
+  font-size:17px !important;
+}
+
+.seatMapLeft .seatAction,
+.seatMapRight .seatAction{
+  writing-mode:horizontal-tb !important;
+  white-space:normal;
+  font-size:11px !important;
+}
+
+.seatMiniAction{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:0;
+  border-radius:999px;
+  padding:5px 8px;
+  margin:2px;
+  font-size:11px;
+  font-weight:1000;
+  background:#f8c84a;
+  color:#24104f;
+  min-height:24px;
+}
+
+.seatMiniAction.removeBot{
+  background:#ef4444;
+  color:white;
+}
+
+.lobbySeat .seatAction{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:2px;
+  max-width:100%;
+}
+
+@media(max-width:430px){
+  .seatMapLeft,
+  .seatMapRight{
+    width:126px !important;
+  }
+
+  .seatMapLeft .seatName,
+  .seatMapRight .seatName{
+    font-size:14px !important;
+  }
+
+  .seatMiniAction{
+    font-size:9px;
+    padding:4px 6px;
+    min-height:21px;
+  }
+}

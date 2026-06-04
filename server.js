@@ -650,6 +650,50 @@ io.on("connection", socket => {
     }
     emitRoom(roomCode);
   });
+  socket.on("seatAction", ({ roomCode, seatKey, action }) => {
+    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
+    const room = rooms[roomCode];
+    if(!room || room.phase !== "lobby") return socket.emit("errorMessage","Seat selection is only available before the game starts.");
+
+    const allowed = ["top","left","right","bottom"];
+    if(!allowed.includes(seatKey)) return socket.emit("errorMessage","Invalid seat.");
+
+    const player = room.players.find(p => p.id === socket.id && !p.isBot) ||
+      room.players.find(p => !p.isBot && socket.data?.playerToken && p.token === socket.data.playerToken);
+
+    if(action === "addBot"){
+      if(typeof isOwner === "function" && !isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can add bots.");
+      if(room.players.some(p => p.seatKey === seatKey)) return socket.emit("errorMessage","That seat is already taken.");
+      if(!addBot(room, seatKey)) return socket.emit("errorMessage","No empty seats available.");
+      emitRoom(roomCode);
+      return;
+    }
+
+    if(action === "removeBot"){
+      if(typeof isOwner === "function" && !isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can remove bots.");
+      const idx = room.players.findIndex(p => p.isBot && p.seatKey === seatKey);
+      if(idx >= 0){
+        room.players.splice(idx, 1);
+        emitRoom(roomCode);
+      }
+      return;
+    }
+
+    if(!player) return socket.emit("errorMessage","Could not find you in this room. Tap refresh/reconnect and try again.");
+
+    const taken = room.players.find(p => p.seatKey === seatKey && p.token !== player.token);
+    if(taken && taken.isBot){
+      const botIndex = room.players.findIndex(p => p.id === taken.id);
+      if(botIndex !== -1) room.players.splice(botIndex, 1);
+    } else if(taken){
+      return socket.emit("errorMessage","That seat is already taken by another player.");
+    }
+
+    player.seatKey = seatKey;
+    player.disconnected = false;
+    emitRoom(roomCode);
+  });
+
   socket.on("chooseSeat", ({ roomCode, seatKey }) => {
     roomCode = normaliseRoomCode(roomCode);
     const room = rooms[roomCode];
