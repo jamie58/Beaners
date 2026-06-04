@@ -1,22 +1,20 @@
-# Beaners v51 Lobby Stability Reset
+# Beaners v53 Playing Field Restoration
 
-Built from the last version that could create/enter the lobby.
+Built on the clean working rebuild that restored create/join/seating/bots.
 
-Fixes:
-- Clean v51-only seat events, bypassing old broken seat handlers.
-- Empty seat: Sit Here + Add Bot.
-- Bot seat: Remove Bot.
-- Human seat: player name only.
-- Seat click sends v51SeatAction.
-- Add/remove bot sends v51SeatAction.
-- Spin sends v51SpinStarter and uses seated players/bots only.
-- Start sends v51StartGame and uses the selected starter.
-- Exit sends v51ExitGame and identifies player by token/socket.
-- Refresh sends v51RequestState.
-- Version is centralised in public/version.js and shown as v51.
+Changes:
+- Keeps the stable v52 backend/lobby flow.
+- Restores old-style playing field layout.
+- Top / left / right / bottom player zones.
+- Melds appear inside each player's area.
+- Centre vertical deck/discard stack.
+- Top discard card large.
+- Previous discard cards preview underneath.
+- Turn highlight colours:
+  - green immediately
+  - orange after 25 seconds
+  - red after 40 seconds
+- Keeps the newer stable hand/buttons.
+- Version labels updated to v53.
 
-Syntax checked:
-- server.js
-- app.js
-- start.js
-- version.js
+No networking/lobby logic changes beyond version state exposure.

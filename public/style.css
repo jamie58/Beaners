@@ -96,3 +96,320 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
   .card{width:50px;height:72px}
   .actions{grid-template-columns:repeat(4,1fr)}
 }
+
+
+/* v53 restored playing field */
+.table{
+  height:calc(100% - 46px);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  overflow:hidden;
+}
+
+.playfield{
+  flex:1;
+  min-height:0;
+  position:relative;
+  display:grid;
+  grid-template-columns:1fr 112px 1fr;
+  grid-template-rows:1fr 1.28fr 1fr;
+  grid-template-areas:
+    "top top top"
+    "left centre right"
+    "bottom bottom bottom";
+  gap:6px;
+  padding:4px;
+}
+
+.playerZone{
+  background:#fffaf0;
+  color:#24104f;
+  border:3px solid rgba(248,200,74,.55);
+  border-radius:16px;
+  padding:8px;
+  overflow:hidden;
+  min-height:0;
+  box-shadow:0 6px 18px rgba(0,0,0,.18);
+}
+
+.zoneTop{grid-area:top}
+.zoneLeft{grid-area:left}
+.zoneRight{grid-area:right}
+.zoneBottom{grid-area:bottom}
+
+.zoneHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:8px;
+  margin-bottom:4px;
+}
+
+.zoneHeader strong{
+  font-size:16px;
+  line-height:1;
+}
+
+.zoneHeader small{
+  font-size:11px;
+  font-weight:900;
+  opacity:.75;
+  white-space:nowrap;
+}
+
+.zoneMelds{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  align-content:flex-start;
+  overflow:hidden;
+  max-height:calc(100% - 24px);
+}
+
+.noMelds{
+  font-size:13px;
+  font-weight:800;
+  opacity:.45;
+}
+
+.restoredMeld{
+  background:#f7e9a7;
+  color:#24104f;
+  border:2px solid rgba(36,16,79,.25);
+  border-radius:12px;
+  padding:4px;
+  min-width:auto;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:3px;
+}
+
+.meldLabel{
+  font-size:10px;
+  font-weight:1000;
+  opacity:.72;
+  padding:0 2px;
+}
+
+.restoredMeldCards{
+  display:flex;
+  flex-wrap:nowrap;
+  gap:3px;
+}
+
+.centreStack{
+  grid-area:centre;
+  align-self:center;
+  justify-self:center;
+  width:104px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:7px;
+  z-index:3;
+}
+
+.restoredDeck{
+  width:88px !important;
+  height:118px !important;
+  border-radius:16px !important;
+  background:#f8c84a !important;
+  color:#24104f !important;
+  display:flex !important;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  box-shadow:0 10px 22px rgba(0,0,0,.18);
+}
+
+.restoredDeck span{
+  font-size:17px;
+}
+
+.restoredDeck strong{
+  font-size:22px;
+}
+
+.restoredDiscard{
+  width:96px;
+  background:#fffaf0;
+  color:#24104f;
+  border-radius:16px;
+  padding:6px;
+  box-shadow:0 10px 22px rgba(0,0,0,.18);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
+}
+
+.restoredDiscardTop{
+  width:70px !important;
+  height:94px !important;
+  background:white !important;
+  border:3px solid #1c1917 !important;
+  border-radius:10px !important;
+  color:#111827 !important;
+  padding:2px !important;
+  display:flex !important;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+}
+
+.restoredDiscardTop strong{
+  font-size:24px;
+  line-height:1;
+}
+
+.restoredDiscardTop span{
+  font-size:30px;
+  line-height:1;
+}
+
+.restoredDiscardTop.red{
+  color:#dc2626 !important;
+}
+
+.restoredDiscardTop.black{
+  color:#111827 !important;
+}
+
+.restoredDiscardPreview{
+  display:grid !important;
+  grid-template-columns:repeat(4, 1fr);
+  gap:2px;
+  max-width:82px !important;
+}
+
+.restoredDiscardPreview .smallCard{
+  width:18px !important;
+  height:26px !important;
+  border-radius:4px !important;
+  border-width:1px !important;
+  box-shadow:none !important;
+}
+
+.restoredDiscardPreview .smallCard strong{
+  font-size:8px !important;
+}
+
+.restoredDiscardPreview .smallCard span{
+  font-size:10px !important;
+}
+
+.takePileBtn{
+  width:78px;
+  height:auto;
+  padding:6px 4px !important;
+  font-size:11px;
+  border-radius:10px !important;
+}
+
+.restoredHandPanel{
+  flex:none;
+  border-radius:18px 18px 12px 12px;
+  padding:8px !important;
+}
+
+.hand{
+  min-height:86px;
+}
+
+.turnGreen{
+  outline:5px solid #22c55e;
+  animation:turnPulse 1s infinite;
+}
+
+.turnOrange{
+  outline:5px solid #f97316;
+  animation:turnPulse 0.85s infinite;
+}
+
+.turnRed{
+  outline:5px solid #ef4444;
+  animation:turnPulse 0.65s infinite;
+}
+
+@keyframes turnPulse{
+  0%,100%{box-shadow:0 0 0 rgba(255,255,255,0)}
+  50%{box-shadow:0 0 22px rgba(255,255,255,.55)}
+}
+
+@media(max-width:480px){
+  .playfield{
+    grid-template-columns:1fr 94px 1fr;
+    grid-template-rows:1fr 1.18fr 1fr;
+    gap:5px;
+    padding:3px;
+  }
+
+  .playerZone{
+    border-radius:14px;
+    padding:6px;
+  }
+
+  .zoneHeader strong{
+    font-size:14px;
+  }
+
+  .zoneHeader small{
+    font-size:10px;
+  }
+
+  .centreStack{
+    width:92px;
+    gap:5px;
+  }
+
+  .restoredDeck{
+    width:76px !important;
+    height:102px !important;
+  }
+
+  .restoredDeck span{
+    font-size:15px;
+  }
+
+  .restoredDeck strong{
+    font-size:19px;
+  }
+
+  .restoredDiscard{
+    width:86px;
+    padding:5px;
+  }
+
+  .restoredDiscardTop{
+    width:62px !important;
+    height:82px !important;
+  }
+
+  .restoredDiscardTop strong{
+    font-size:21px;
+  }
+
+  .restoredDiscardTop span{
+    font-size:26px;
+  }
+
+  .restoredMeld .smallCard{
+    width:28px;
+    height:40px;
+  }
+
+  .restoredMeld .smallCard strong{
+    font-size:11px;
+  }
+
+  .restoredMeld .smallCard span{
+    font-size:14px;
+  }
+
+  .hand{
+    min-height:78px;
+  }
+}

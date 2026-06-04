@@ -11,7 +11,7 @@
   <div id="splash" class="splash">
     <div class="splashLogo">BEANERS</div>
     <div class="splashSub">Loading the table...</div>
-    <div id="splashVersion" class="splashVersion">v52</div>
+    <div id="splashVersion" class="splashVersion">v53</div>
   </div>
 
   <main>
@@ -26,7 +26,7 @@
         <button id="createBtn">Create Room</button>
         <button id="joinBtn">Join Room</button>
       </div>
-      <div id="startVersion" class="startDebug">v52</div>
+      <div id="startVersion" class="startDebug">v53</div>
     </section>
 
     <section id="game" class="hidden">
@@ -70,20 +70,54 @@
       </section>
 
       <section id="table" class="table hidden">
-        <div id="playersArea" class="playersArea"></div>
+        <div id="playfield" class="playfield">
+          <section class="playerZone zoneTop" data-zone="top">
+            <div class="zoneHeader">
+              <strong id="topName">Top</strong>
+              <small id="topMeta">0 cards • 0 pts</small>
+            </div>
+            <div id="topMelds" class="zoneMelds"></div>
+          </section>
 
-        <div class="centre">
-          <button id="drawDeck" class="deck">Deck<br><span id="deckCount">0</span></button>
-          <div class="discardBox">
-            <button id="topDiscard" class="discardTop">Discard</button>
-            <button id="takePile" class="smallBtn">Take Pile</button>
-            <div id="discardPreview" class="discardPreview"></div>
-          </div>
+          <section class="playerZone zoneLeft" data-zone="left">
+            <div class="zoneHeader">
+              <strong id="leftName">Left</strong>
+              <small id="leftMeta">0 cards • 0 pts</small>
+            </div>
+            <div id="leftMelds" class="zoneMelds"></div>
+          </section>
+
+          <section class="centreStack">
+            <button id="drawDeck" class="deck restoredDeck">
+              <span>Deck</span>
+              <strong id="deckCount">0</strong>
+            </button>
+
+            <div class="restoredDiscard">
+              <button id="topDiscard" class="discardTop restoredDiscardTop">Discard</button>
+              <div id="discardPreview" class="discardPreview restoredDiscardPreview"></div>
+              <button id="takePile" class="smallBtn takePileBtn">Take Pile</button>
+            </div>
+          </section>
+
+          <section class="playerZone zoneRight" data-zone="right">
+            <div class="zoneHeader">
+              <strong id="rightName">Right</strong>
+              <small id="rightMeta">0 cards • 0 pts</small>
+            </div>
+            <div id="rightMelds" class="zoneMelds"></div>
+          </section>
+
+          <section class="playerZone zoneBottom" data-zone="bottom">
+            <div class="zoneHeader">
+              <strong id="bottomName">You</strong>
+              <small id="bottomMeta">0 cards • 0 pts</small>
+            </div>
+            <div id="bottomMelds" class="zoneMelds"></div>
+          </section>
         </div>
 
-        <div id="melds" class="melds"></div>
-
-        <div class="handPanel">
+        <div class="handPanel restoredHandPanel">
           <div id="hand" class="hand"></div>
           <div class="actions">
             <button id="layMeld">Lay Selected Meld</button>

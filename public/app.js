@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v52";
+  const VERSION = window.BEANERS_VERSION || "v53";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -179,6 +179,99 @@
     requestAnimationFrame(frame);
   }
 
+
+  function seatOrderForMe() {
+    const me = currentPlayer();
+    const actual = me?.seat || "bottom";
+    const clockwise = ["bottom","left","top","right"];
+    const idx = clockwise.indexOf(actual);
+    const rotated = idx >= 0 ? clockwise.slice(idx).concat(clockwise.slice(0, idx)) : clockwise;
+    return {
+      bottom: rotated[0],
+      left: rotated[1],
+      top: rotated[2],
+      right: rotated[3]
+    };
+  }
+
+  function playerByVisualSeat(visualSeat) {
+    if (!state) return null;
+    const map = seatOrderForMe();
+    const actualSeat = map[visualSeat];
+    return state.players.find(p => p.seat === actualSeat) || null;
+  }
+
+  function meldsForPlayerToken(token) {
+    if (!state || !token) return [];
+    return state.tableMelds.filter(m => m.ownerToken === token);
+  }
+
+  function renderMeldCard(c) {
+    return createCard(c, true).outerHTML;
+  }
+
+  function renderZone(visualSeat) {
+    const p = playerByVisualSeat(visualSeat);
+    const nameEl = $(`${visualSeat}Name`);
+    const metaEl = $(`${visualSeat}Meta`);
+    const meldEl = $(`${visualSeat}Melds`);
+    const zoneEl = document.querySelector(`.zone${visualSeat[0].toUpperCase()}${visualSeat.slice(1)}`);
+
+    if (!nameEl || !metaEl || !meldEl || !zoneEl) return;
+
+    zoneEl.classList.remove("emptyZone","meZone","turnGreen","turnOrange","turnRed");
+
+    if (!p) {
+      zoneEl.classList.add("emptyZone");
+      nameEl.textContent = visualSeat === "bottom" ? "You" : visualSeat;
+      metaEl.textContent = "No player";
+      meldEl.innerHTML = `<div class="noMelds">No melds yet</div>`;
+      return;
+    }
+
+    if (p.token === playerToken) zoneEl.classList.add("meZone");
+
+    if (p.isTurn) {
+      const elapsed = state.turnStartedAt ? Math.floor((Date.now() - state.turnStartedAt) / 1000) : 0;
+      if (elapsed >= 40) zoneEl.classList.add("turnRed");
+      else if (elapsed >= 25) zoneEl.classList.add("turnOrange");
+      else zoneEl.classList.add("turnGreen");
+    }
+
+    nameEl.textContent = p.token === playerToken ? `${p.name} (you)` : p.name;
+    metaEl.textContent = `${p.cardCount} cards • ${p.isDown ? "Down" : "Not down"} • ${p.totalScore} pts`;
+
+    const melds = meldsForPlayerToken(p.token);
+    if (!melds.length) {
+      meldEl.innerHTML = `<div class="noMelds">No melds yet</div>`;
+      return;
+    }
+
+    meldEl.innerHTML = "";
+    melds.forEach(m => {
+      const box = document.createElement("button");
+      box.type = "button";
+      box.className = "restoredMeld";
+      box.dataset.id = m.id;
+      box.innerHTML = `
+        <div class="meldLabel">${m.type.toUpperCase()}</div>
+        <div class="restoredMeldCards">${m.cards.map(renderMeldCard).join("")}</div>
+      `;
+      box.addEventListener("click", () => {
+        const ids = [...selected];
+        if (ids.length !== 1) return;
+        socket.emit("playOnMeld", { roomCode, playerToken, meldId: m.id, cardId: ids[0] });
+        selected.clear();
+      });
+      meldEl.appendChild(box);
+    });
+  }
+
+  function updateTurnHighlightsLoop() {
+    if (!state || state.phase !== "playing") return;
+    ["top","left","right","bottom"].forEach(renderZone);
+  }
+
   function renderTable() {
     $("lobby").classList.add("hidden");
     $("table").classList.remove("hidden");
@@ -186,54 +279,24 @@
     $("beanerBadge").textContent = state.beaner || "A";
 
     $("deckCount").textContent = state.deckCount;
-    $("topDiscard").textContent = state.discard[0] ? cardText(state.discard[0]) : "Discard";
+
+    const top = state.discard[0];
+    const topDiscard = $("topDiscard");
+    if (top) {
+      topDiscard.innerHTML = `<strong>${top.rank}</strong><span>${top.suit}</span>`;
+      topDiscard.className = `discardTop restoredDiscardTop ${suitClass(top)}`;
+    } else {
+      topDiscard.textContent = "Discard";
+      topDiscard.className = "discardTop restoredDiscardTop";
+    }
 
     const preview = $("discardPreview");
     preview.innerHTML = "";
-    state.discard.slice(1).forEach(c => preview.appendChild(createCard(c, true)));
+    state.discard.slice(1, 9).forEach(c => preview.appendChild(createCard(c, true)));
 
-    const playersArea = $("playersArea");
-    playersArea.innerHTML = state.players.map(p => `
-      <div class="playerPill ${p.token === playerToken ? "me" : ""} ${p.isTurn ? "turn" : ""}">
-        ${escapeHtml(p.name)}<br><small>${p.cardCount} cards • ${p.totalScore} pts</small>
-      </div>
-    `).join("");
-
-    const melds = $("melds");
-    melds.innerHTML = "";
-    state.tableMelds.forEach(m => {
-      const box = document.createElement("div");
-      box.className = "meld";
-      box.dataset.id = m.id;
-      box.innerHTML = `<div class="meldOwner">${escapeHtml(m.ownerName)} ${m.type}</div>`;
-      const cards = document.createElement("div");
-      cards.className = "meldCards";
-      m.cards.forEach(c => cards.appendChild(createCard(c, true)));
-      box.appendChild(cards);
-      box.addEventListener("click", () => {
-        const ids = [...selected];
-        if (ids.length !== 1) return;
-        socket.emit("playOnMeld", { roomCode, playerToken, meldId: m.id, cardId: ids[0] });
-        selected.clear();
-      });
-      melds.appendChild(box);
-    });
+    ["top","left","right","bottom"].forEach(renderZone);
 
     renderHand();
-  }
-
-  function renderHand() {
-    const el = $("hand");
-    el.innerHTML = "";
-    hand.forEach(c => {
-      const card = createCard(c);
-      if (selected.has(c.id)) card.classList.add("selected");
-      card.addEventListener("click", () => {
-        selected.has(c.id) ? selected.delete(c.id) : selected.add(c.id);
-        renderHand();
-      });
-      el.appendChild(card);
-    });
   }
 
   function renderScore() {
@@ -355,4 +418,6 @@
   });
 
   $("nextRoundBtn").addEventListener("click", () => socket.emit("nextRound", { roomCode }));
+
+  setInterval(updateTurnHighlightsLoop, 1000);
 })();
