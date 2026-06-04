@@ -2877,115 +2877,7 @@ body.inLobbyMode #game{
   content:"";
 }
 
-/* v45 seat bot buttons */
-.lobbySeat{ padding-bottom:36px !important; }
-.lobbySeat .seatAction{
-  position:absolute;
-  left:4px;
-  right:4px;
-  bottom:5px;
-  display:flex !important;
-  flex-direction:row !important;
-  justify-content:center;
-  align-items:center;
-  gap:4px;
-  transform:none !important;
-}
-.seatMiniAction{
-  border:0;
-  border-radius:999px;
-  padding:4px 6px;
-  font-size:9px;
-  line-height:1;
-  font-weight:1000;
-  background:#f8c84a;
-  color:#24104f;
-  min-height:20px;
-  white-space:nowrap;
-}
-.seatMiniAction.removeBotBtn,
-.seatMiniAction.removeBot{
-  background:#ef4444;
-  color:white;
-}
-.seatMapLeft .seatAction,
-.seatMapRight .seatAction{ transform:none !important; }
-@media(max-width:430px){
-  .lobbySeat{ padding-bottom:32px !important; }
-  .seatMiniAction{ font-size:8px; padding:3px 5px; min-height:18px; }
-  .lobbySeat .seatAction{ gap:2px; bottom:4px; }
-}
-
-/* v46 visible bot buttons + exit/lobby polish */
-body.inLobbyMode #playingControls,
-body.inLobbyMode .handPanel,
-body.inLobbyMode #handPanel,
-body.inLobbyMode .playerHand,
-body.inLobbyMode .actionsPanel{
-  display:none !important;
-}
-
-.lobbySeat{
-  padding-bottom:38px !important;
-  touch-action:manipulation !important;
-  cursor:pointer !important;
-}
-
-.lobbySeat .seatAction{
-  position:absolute !important;
-  left:4px !important;
-  right:4px !important;
-  bottom:5px !important;
-  display:flex !important;
-  flex-direction:row !important;
-  justify-content:center !important;
-  align-items:center !important;
-  gap:4px !important;
-  transform:none !important;
-  z-index:20 !important;
-  pointer-events:auto !important;
-}
-
-.seatMiniAction{
-  display:inline-flex !important;
-  align-items:center !important;
-  justify-content:center !important;
-  border:0 !important;
-  border-radius:999px !important;
-  padding:4px 7px !important;
-  font-size:9px !important;
-  line-height:1 !important;
-  font-weight:1000 !important;
-  background:#f8c84a !important;
-  color:#24104f !important;
-  min-height:20px !important;
-  white-space:nowrap !important;
-  pointer-events:auto !important;
-}
-
-.seatMiniAction.removeBotBtn{
-  background:#ef4444 !important;
-  color:white !important;
-}
-
-.seatMapLeft .seatAction,
-.seatMapRight .seatAction,
-.seatMapLeft .seatName,
-.seatMapRight .seatName{
-  transform:none !important;
-}
-
-@media(max-width:430px){
-  .lobbySeat{ padding-bottom:34px !important; }
-  .seatMiniAction{
-    font-size:8px !important;
-    padding:3px 5px !important;
-    min-height:18px !important;
-  }
-  .lobbySeat .seatAction{ gap:2px !important; }
-}
-
-/* v47 lobby seat clean-up */
+/* v51 lobby stability reset */
 body.inLobbyMode #playingControls,
 body.inLobbyMode .handPanel,
 body.inLobbyMode #handPanel,
@@ -2998,6 +2890,8 @@ body.inLobbyMode .actionsPanel{
   padding:10px 8px 34px !important;
   overflow:visible !important;
   z-index:8 !important;
+  touch-action:manipulation !important;
+  cursor:pointer !important;
 }
 
 .lobbySeat .seatName{
@@ -3063,57 +2957,13 @@ body.inLobbyMode .actionsPanel{
   transform:none !important;
 }
 
-.tableSeatName{
-  text-transform:capitalize !important;
-}
-
 @media(max-width:430px){
-  .lobbySeat .seatName{
-    font-size:14px !important;
-  }
-
-  .lobbySeat.humanSeat .seatName{
-    font-size:16px !important;
-  }
-
-  .lobbySeat.botSeat .seatName{
-    font-size:13px !important;
-  }
-
+  .lobbySeat .seatName{ font-size:14px !important; }
+  .lobbySeat.humanSeat .seatName{ font-size:16px !important; }
+  .lobbySeat.botSeat .seatName{ font-size:13px !important; }
   .seatMiniAction{
     font-size:9px !important;
     padding:4px 7px !important;
     min-height:20px !important;
   }
 }
-
-/* v48 lobby start button active state */
-#spinBtn, #startBtn{
-  touch-action:manipulation;
-}
-#wheelResult{
-  min-height:36px;
-}
-
-/* v49 stability polish */
-body.inLobbyMode #playingControls,
-body.inLobbyMode .handPanel,
-body.inLobbyMode #handPanel,
-body.inLobbyMode .playerHand,
-body.inLobbyMode .actionsPanel{
-  display:none !important;
-}
-
-/* v50 stability release lobby polish */
-body.inLobbyMode #playingControls, body.inLobbyMode .handPanel, body.inLobbyMode #handPanel, body.inLobbyMode .playerHand, body.inLobbyMode .actionsPanel{display:none !important;}
-.lobbySeat{padding:10px 8px 34px !important;overflow:visible !important;z-index:8 !important;touch-action:manipulation !important;cursor:pointer !important;}
-.lobbySeat .seatName{display:block !important;width:100% !important;text-align:center !important;white-space:normal !important;line-height:1.05 !important;font-size:17px !important;transform:none !important;}
-.lobbySeat .seatAction{position:absolute !important;left:6px !important;right:6px !important;bottom:6px !important;display:flex !important;justify-content:center !important;align-items:center !important;transform:none !important;z-index:30 !important;}
-.seatMiniAction{border:0 !important;border-radius:999px !important;padding:5px 9px !important;font-size:10px !important;line-height:1 !important;font-weight:1000 !important;white-space:nowrap !important;min-height:22px !important;pointer-events:auto !important;}
-.seatMiniAction.addBotBtn{background:#f8c84a !important;color:#24104f !important;}
-.seatMiniAction.removeBotBtn{background:#ef4444 !important;color:white !important;}
-.lobbySeat.humanSeat{padding-bottom:10px !important;}
-.lobbySeat.humanSeat .seatName{font-size:19px !important;}
-.lobbySeat.botSeat .seatName{font-size:15px !important;}
-.seatMapLeft .seatName,.seatMapRight .seatName,.seatMapLeft .seatAction,.seatMapRight .seatAction{transform:none !important;}
-@media(max-width:430px){.lobbySeat .seatName{font-size:14px !important;}.lobbySeat.humanSeat .seatName{font-size:16px !important;}.lobbySeat.botSeat .seatName{font-size:13px !important;}.seatMiniAction{font-size:9px !important;padding:4px 7px !important;min-height:20px !important;}}

@@ -1,15 +1,22 @@
-# Beaners v50 Stability Release
+# Beaners v51 Lobby Stability Reset
 
-Focus: lobby/seat/bot/wheel/start/exit/reconnect stability.
+Built from the last version that could create/enter the lobby.
 
-Updates:
-- Single clean start.js lobby controller.
-- Token-backed player identity for seating, reconnect, refresh and exit.
+Fixes:
+- Clean v51-only seat events, bypassing old broken seat handlers.
 - Empty seat: Sit Here + Add Bot.
-- Bot seat: Remove Bot only.
+- Bot seat: Remove Bot.
 - Human seat: player name only.
-- Wheel uses seated players/bots only.
-- Start button uses chosen wheel starter as first player.
-- Version source added via /version.js, v50 across splash/name screen.
+- Seat click sends v51SeatAction.
+- Add/remove bot sends v51SeatAction.
+- Spin sends v51SpinStarter and uses seated players/bots only.
+- Start sends v51StartGame and uses the selected starter.
+- Exit sends v51ExitGame and identifies player by token/socket.
+- Refresh sends v51RequestState.
+- Version is centralised in public/version.js and shown as v51.
 
-Syntax checked: server.js, app.js, start.js, version.js.
+Syntax checked:
+- server.js
+- app.js
+- start.js
+- version.js
