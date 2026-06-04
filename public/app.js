@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v53";
+  const VERSION = window.BEANERS_VERSION || "v54";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -297,6 +297,11 @@
     ["top","left","right","bottom"].forEach(renderZone);
 
     renderHand();
+
+    const me = currentPlayer();
+    if (me && me.cardCount > 0 && hand.length === 0) {
+      requestMyHand();
+    }
   }
 
   function renderScore() {
@@ -304,10 +309,17 @@
     $("table").classList.add("hidden");
     $("scoreOverlay").classList.remove("hidden");
     $("scoreTitle").textContent = state.winnerMessage || "Round Over";
+    if ($("nextRoundBtn")) $("nextRoundBtn").textContent = state.phase === "roundOver" ? "Next Round" : "Restart Round";
     const latest = state.roundScores[state.roundScores.length - 1];
     $("scoreRows").innerHTML = latest ? latest.scores.map(s => `
       <div class="scoreRow"><span>${escapeHtml(s.name)}</span><span>+${s.score}</span><strong>${s.total}</strong></div>
     `).join("") : "";
+  }
+
+
+  function requestMyHand() {
+    if (!roomCode || !playerToken) return;
+    socket.emit("getHand", { roomCode, playerToken });
   }
 
   function render() {
@@ -331,15 +343,19 @@
     saveSession(data);
     showGame();
     socket.emit("requestRoomState", { roomCode, playerToken });
+    requestMyHand();
   });
 
   socket.on("roomState", s => {
     state = s;
     render();
+    if (state && state.phase === "playing") requestMyHand();
   });
 
   socket.on("yourHand", h => {
     hand = h || [];
+    const valid = new Set(hand.map(c => c.id));
+    selected = new Set([...selected].filter(id => valid.has(id)));
     renderHand();
   });
 
@@ -381,7 +397,7 @@
 
   $("spinBtn").addEventListener("click", () => socket.emit("spinStarter", { roomCode }));
   $("startBtn").addEventListener("click", () => socket.emit("startGame", { roomCode }));
-  $("refreshBtn").addEventListener("click", () => socket.emit("requestRoomState", { roomCode, playerToken }));
+  $("refreshBtn").addEventListener("click", () => { socket.emit("requestRoomState", { roomCode, playerToken }); requestMyHand(); });
   $("exitBtn").addEventListener("click", () => {
     if (confirm("Exit game?")) socket.emit("exitGame", { roomCode, playerToken });
   });
@@ -417,7 +433,10 @@
     renderHand();
   });
 
-  $("nextRoundBtn").addEventListener("click", () => socket.emit("nextRound", { roomCode }));
+  $("nextRoundBtn").addEventListener("click", () => {
+    if (state && state.phase === "roundOver") socket.emit("nextRound", { roomCode });
+    else socket.emit("restartRound", { roomCode });
+  });
 
   setInterval(updateTurnHighlightsLoop, 1000);
 })();

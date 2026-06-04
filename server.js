@@ -57,4 +57,12 @@ io.on('connection', socket=>{
   socket.on('exitGame',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return socket.emit('exitedGame'); const p=player(room,socket,playerToken); if(!p) return socket.emit('exitedGame'); const idx=room.players.findIndex(x=>!x.isBot&&x.token===p.token); if(idx>=0){ if(room.phase==='lobby') room.players.splice(idx,1); else room.players[idx]={...p,id:`bot-${tok().slice(0,6)}`,token:`bot-${tok()}`,name:`${p.name} Bot`,isBot:true,connected:true}; } socket.leave(rc); socket.emit('exitedGame'); if(!room.players.length) delete rooms[rc]; else emitRoom(rc); });
   socket.on('disconnect',()=>{ const f=findByToken(socket.data.playerToken); if(f){ f.player.connected=false; f.player.lastSeen=Date.now(); emitRoom(f.roomCode); } });
 });
-server.listen(PORT,()=>console.log(`Beaners ${GAME_VERSION} running on port ${PORT}`));
+server.listen(PORT,()=>console.log(`Beaners ${GAME_VERSION} running on port ${PORT}`));  socket.on("getHand", ({ roomCode, playerToken }) => {
+    const code = normaliseCode(roomCode);
+    const room = rooms[code];
+    if (!room) return;
+    const player = findPlayer(room, socket, playerToken);
+    if (player) socket.emit("yourHand", player.hand);
+  });
+
+

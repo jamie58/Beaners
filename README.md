@@ -1,20 +1,11 @@
-# Beaners v53 Playing Field Restoration
+# Beaners v54 Hand / Refresh / Round Fix
 
-Built on the clean working rebuild that restored create/join/seating/bots.
+Built on v53.
 
-Changes:
-- Keeps the stable v52 backend/lobby flow.
-- Restores old-style playing field layout.
-- Top / left / right / bottom player zones.
-- Melds appear inside each player's area.
-- Centre vertical deck/discard stack.
-- Top discard card large.
-- Previous discard cards preview underneath.
-- Turn highlight colours:
-  - green immediately
-  - orange after 25 seconds
-  - red after 40 seconds
-- Keeps the newer stable hand/buttons.
-- Version labels updated to v53.
-
-No networking/lobby logic changes beyond version state exposure.
+Fixes:
+- Requests and renders the player's hand after game start and every room state update.
+- Adds/ensures top-bar refresh button.
+- Refresh requests both room state and hand.
+- Next Round / Restart Round button now works more reliably.
+- Adds a restartRound server event for testing/recovery.
+- Version labels updated to v54.
