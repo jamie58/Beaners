@@ -3,204 +3,109 @@
 <head>
   <meta charset="utf-8">
   <title>Beaners</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-  <meta name="theme-color" content="#0b3d27">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Beaners">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="manifest" href="/manifest.json">
   <link rel="stylesheet" href="/style.css">
 </head>
-<body data-app-version="v37">
-  <div id="splashScreen" class="splashScreen">
-    <div class="splashIconWrap">
-      <img src="/icons/icon-192.png" alt="Beaners icon" class="splashIcon">
-    </div>
-    <div class="splashTitle">BEANERS</div>
+<body>
+  <div id="splash" class="splash">
+    <div class="splashLogo">BEANERS</div>
     <div class="splashSub">Loading the table...</div>
-    <div id="splashVersion" class="splashVersion">v51</div>
+    <div id="splashVersion" class="splashVersion">v52</div>
   </div>
+
   <main>
-    <header class="appBar">
-      <div class="leftTopGroup">
-        <button id="exitXBtn" class="exitX hidden" title="Exit game">×</button>
-        <button id="restartGameBtn" class="restartBtn hidden" title="Restart game">↻</button>
-        <button id="copyRoomBtn" class="roomPill copyRoomBtn">----</button>
-      </div>
-
-      <div class="beanersLogo"><img src="/icons/icon-192.png" alt="" class="miniLogoIcon"><span>BEANERS</span></div>
-
-      <div class="rightTopGroup">
-        <button id="reconnectBtn" class="reconnectBtn hidden" title="Refresh / reconnect">⟳</button>
-        <div id="compactBeaner" class="beanerPill compactBeanerOnly">A</div>
-        <button id="soundToggleBtn" class="soundBtn" title="Sound on/off">🔊</button>
-      </div>
-    </header>
-
-    <section id="lobby" class="panel lobby startScreen">
-      <div class="startLogo iconLogo"><img src="/icons/icon-192.png" alt="" class="startIcon"><span>BEANERS</span></div>
-      <p class="startHint">Enter your name first, then create a room or join your mates.</p>
-
+    <section id="startScreen" class="panel">
+      <div class="logo">BEANERS</div>
+      <p class="hint">Enter your name first, then create a room or join your mates.</p>
       <label>Your player name</label>
-      <input id="nameInput" placeholder="Enter your name" maxlength="20" autocomplete="nickname">
-
+      <input id="nameInput" maxlength="20" placeholder="Jamie">
       <label>Join code</label>
-      <input id="roomInput" placeholder="Only needed if joining" maxlength="4" inputmode="numeric">
-
-      <div class="soundSetup">
-        <label class="inlineSound"><input id="soundEnabledStart" type="checkbox" checked> Sound</label>
-        <label class="inlineSound"><input id="hapticsEnabledStart" type="checkbox" checked> Haptics</label>
-      </div>
-
+      <input id="roomInput" maxlength="4" inputmode="numeric" placeholder="Only needed if joining">
       <div class="startActions">
-        <button id="createBtn" type="button">Create Room</button>
-        <button id="joinBtn" type="button">Join Room</button>
+        <button id="createBtn">Create Room</button>
+        <button id="joinBtn">Join Room</button>
       </div>
-      <div id="startDebug" class="startDebug">v51</div>
+      <div id="startVersion" class="startDebug">v52</div>
     </section>
 
     <section id="game" class="hidden">
-      <section class="panel topPanel">
-        <div>
-          <h2>Room <span id="roomCode"></span></h2>
-          <p id="status"></p>
-        </div>
-        <div class="roundBadge">
-          <span>Round <b id="roundNo">1</b>/13</span>
-          <strong>Beaner: <span id="beanerRank">A</span></strong>
-        </div>
-      </section>
+      <header class="topbar">
+        <button id="exitBtn" class="iconBtn">×</button>
+        <div class="roomBadge">Room <span id="roomCode">----</span></div>
+        <button id="refreshBtn" class="refreshBtn">↻</button>
+        <div id="beanerBadge" class="beanerBadge">A</div>
+      </header>
 
-      <div id="winnerMessage" class="winner hidden"></div>
-
-      <section id="lobbyControls" class="lobbyRewrite hidden">
+      <section id="lobby" class="lobby hidden">
         <div class="lobbyCard">
-          <div class="lobbyUnseated">
+          <div class="inLobby">
             <strong>In Lobby:</strong>
-            <div id="lobbyUnseatedNames">Waiting...</div>
+            <div id="lobbyPlayers">Waiting...</div>
           </div>
 
           <div class="seatMap">
-            <button class="lobbySeat seatMapTop" type="button" data-seat="top">
-              <span class="seatName">Sit Here</span>
-              <span class="seatAction">Tap to sit</span>
-            </button>
-
-            <button class="lobbySeat seatMapLeft" type="button" data-seat="left">
-              <span class="seatName">Sit Here</span>
-              <span class="seatAction">Tap to sit</span>
-            </button>
-
-            <div class="lobbyTableCircle">
-              <div id="seatTopLabel" class="tableSeatName tableTop">Top</div>
-              <div id="seatLeftLabel" class="tableSeatName tableLeft">Left</div>
-              <div id="seatRightLabel" class="tableSeatName tableRight">Right</div>
-              <div id="seatBottomLabel" class="tableSeatName tableBottom">Bottom</div>
+            <button class="seat seatTop" data-seat="top"><span class="seatName">Sit Here</span><span class="seatAction"></span></button>
+            <button class="seat seatLeft" data-seat="left"><span class="seatName">Sit Here</span><span class="seatAction"></span></button>
+            <div class="tableCircle">
+              <span id="labelTop" class="tableLabel top">Top</span>
+              <span id="labelLeft" class="tableLabel left">Left</span>
+              <span id="labelRight" class="tableLabel right">Right</span>
+              <span id="labelBottom" class="tableLabel bottom">Bottom</span>
             </div>
-
-            <button class="lobbySeat seatMapRight" type="button" data-seat="right">
-              <span class="seatName">Sit Here</span>
-              <span class="seatAction">Tap to sit</span>
-            </button>
-
-            <button class="lobbySeat seatMapBottom" type="button" data-seat="bottom">
-              <span class="seatName">Sit Here</span>
-              <span class="seatAction">Tap to sit</span>
-            </button>
+            <button class="seat seatRight" data-seat="right"><span class="seatName">Sit Here</span><span class="seatAction"></span></button>
+            <button class="seat seatBottom" data-seat="bottom"><span class="seatName">Sit Here</span><span class="seatAction"></span></button>
           </div>
         </div>
 
         <div class="wheelRow">
           <canvas id="starterWheel" width="280" height="280"></canvas>
           <div class="wheelControls">
-            <button id="spinBtn" type="button">Spin Wheel</button>
+            <button id="spinBtn">Spin Wheel</button>
             <div id="wheelResult"></div>
           </div>
         </div>
 
-        <button id="startBtn" class="letsBeanersBtn" type="button">Leeeeets Beaners - Scraps On!</button>
+        <button id="startBtn" class="startGameBtn">Leeeeets Beaners - Scraps On!</button>
       </section>
 
-      <section id="playingControls" class="playingControls hidden">
-        <section class="tableShell">
-          <div class="tableFelt">
-            <div id="seatTop" class="seat seatTop"></div>
-            <div id="seatLeft" class="seat seatLeft"></div>
-            <div id="seatRight" class="seat seatRight"></div>
-            <div id="seatBottom" class="seat seatBottom"></div>
+      <section id="table" class="table hidden">
+        <div id="playersArea" class="playersArea"></div>
 
-            <div class="centerPiles verticalPiles">
-              <div class="pile deckPile">
-                <small class="pileLabel">Deck • <span id="deckCount">0</span></small>
-                <button id="drawDeckBtn" class="card back drawCardButton" aria-label="Draw from deck"></button>
-              </div>
-
-              <div id="discardDropZone" class="pile discardDrop discardPile">
-                <small class="pileLabel">Discard • <span id="discardCount">0</span></small>
-                <button id="takeTopDiscardBtn" class="card large discardButton" aria-label="Take top discard">-</button>
-                <div id="discardPreview" class="discardPreview"></div>
-                <button id="takeAllDiscardBtn" class="miniBtn pickupPileBtn">Pickup Pile!</button>
-              </div>
-            </div>
-
-            <div id="dealAnimation" class="dealAnimation hidden">
-              <div class="flyingCard c1"></div>
-              <div class="flyingCard c2"></div>
-              <div class="flyingCard c3"></div>
-              <div class="flyingCard c4"></div>
-            </div>
+        <div class="centre">
+          <button id="drawDeck" class="deck">Deck<br><span id="deckCount">0</span></button>
+          <div class="discardBox">
+            <button id="topDiscard" class="discardTop">Discard</button>
+            <button id="takePile" class="smallBtn">Take Pile</button>
+            <div id="discardPreview" class="discardPreview"></div>
           </div>
-        </section>
-      </section>
-
-      <section class="panel handPanel">
-        <h3>Your Hand</h3>
-        <p class="hint">Tap to select. Drag to a meld or discard pile. Double-click to auto-play.</p>
-        <div id="hand" class="hand"></div>
-        <div class="actions fourActions">
-          <button id="layMeldBtn">Lay Meld</button>
-          <button id="discardBtn">Discard</button>
-          <button id="sortNumberBtn" type="button" class="secondary smallAction">Sort No.</button>
-          <button id="sortSuitBtn" type="button" class="secondary smallAction">Sort Suit</button>
         </div>
-        </section>
 
-      <section class="panel">
-        <h3>Players / Scores</h3>
-        <div id="players" class="scoreGrid"></div>
+        <div id="melds" class="melds"></div>
+
+        <div class="handPanel">
+          <div id="hand" class="hand"></div>
+          <div class="actions">
+            <button id="layMeld">Lay Selected Meld</button>
+            <button id="discardBtn">Discard</button>
+            <button id="sortRank">Sort Rank</button>
+            <button id="sortSuit">Sort Suit</button>
+          </div>
+        </div>
       </section>
 
-      <section id="roundOverControls" class="panel hidden">
-        <button id="nextRoundBtn">Start Next Round</button>
+      <section id="scoreOverlay" class="scoreOverlay hidden">
+        <div class="scoreCard">
+          <h2 id="scoreTitle">BEANERS!</h2>
+          <div id="scoreRows"></div>
+          <button id="nextRoundBtn">Next Round</button>
+        </div>
       </section>
     </section>
   </main>
 
-
-  <div id="scorecardModal" class="scorecardModal hidden">
-    <div class="scorecardBox">
-      <h2>Round Scorecard</h2>
-      <div id="scorecardContent"></div>
-      <p class="scorecardHint">This will close automatically after 10 seconds.</p>
-      <button id="closeScorecard">Close</button>
-    </div>
-  </div>
-
-  <div id="meldChoice" class="modal hidden">
-    <div class="modalBox">
-      <h3>Choose a meld</h3>
-      <p>This card fits more than one meld.</p>
-      <div id="meldChoiceButtons"></div>
-      <button id="cancelChoice">Cancel</button>
-    </div>
-  </div>
-
-  <div id="fxLayer" class="fxLayer"></div>
-  <script src="/socket.io/socket.io.js"></script>
   <script src="/version.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
   <script src="/app.js"></script>
-  <script src="/start.js"></script>
-  <div id="toast" class="toast hidden"></div>
-  <div id="debugPanel" class="debugPanel hidden"></div>
 </body>
 </html>
