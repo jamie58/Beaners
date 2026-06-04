@@ -3103,3 +3103,17 @@ body.inLobbyMode .playerHand,
 body.inLobbyMode .actionsPanel{
   display:none !important;
 }
+
+/* v50 stability release lobby polish */
+body.inLobbyMode #playingControls, body.inLobbyMode .handPanel, body.inLobbyMode #handPanel, body.inLobbyMode .playerHand, body.inLobbyMode .actionsPanel{display:none !important;}
+.lobbySeat{padding:10px 8px 34px !important;overflow:visible !important;z-index:8 !important;touch-action:manipulation !important;cursor:pointer !important;}
+.lobbySeat .seatName{display:block !important;width:100% !important;text-align:center !important;white-space:normal !important;line-height:1.05 !important;font-size:17px !important;transform:none !important;}
+.lobbySeat .seatAction{position:absolute !important;left:6px !important;right:6px !important;bottom:6px !important;display:flex !important;justify-content:center !important;align-items:center !important;transform:none !important;z-index:30 !important;}
+.seatMiniAction{border:0 !important;border-radius:999px !important;padding:5px 9px !important;font-size:10px !important;line-height:1 !important;font-weight:1000 !important;white-space:nowrap !important;min-height:22px !important;pointer-events:auto !important;}
+.seatMiniAction.addBotBtn{background:#f8c84a !important;color:#24104f !important;}
+.seatMiniAction.removeBotBtn{background:#ef4444 !important;color:white !important;}
+.lobbySeat.humanSeat{padding-bottom:10px !important;}
+.lobbySeat.humanSeat .seatName{font-size:19px !important;}
+.lobbySeat.botSeat .seatName{font-size:15px !important;}
+.seatMapLeft .seatName,.seatMapRight .seatName,.seatMapLeft .seatAction,.seatMapRight .seatAction{transform:none !important;}
+@media(max-width:430px){.lobbySeat .seatName{font-size:14px !important;}.lobbySeat.humanSeat .seatName{font-size:16px !important;}.lobbySeat.botSeat .seatName{font-size:13px !important;}.seatMiniAction{font-size:9px !important;padding:4px 7px !important;min-height:20px !important;}}

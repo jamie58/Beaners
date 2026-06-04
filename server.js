@@ -278,7 +278,7 @@ function publicRoomState(roomCode){
   if(!room) return null;
   return {
     roomCode,
-    appVersion: "v37",
+    appVersion: "v50",
     phase: room.phase,
     round: room.round,
     beaner: beanerForRound(room.round),
@@ -622,8 +622,8 @@ io.on("connection", socket => {
 
     socket.data.playerToken = token;
     socket.join(roomCode);
-    socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
-    socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token});
+    socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token,appVersion:"v50"});
+    socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token,appVersion:"v50"});
     socket.emit("roomState", publicRoomState(roomCode));
     emitRoom(roomCode);
     console.log("room created", roomCode);
@@ -650,8 +650,8 @@ io.on("connection", socket => {
       }
 
       socket.join(roomCode);
-      socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
-    socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token});
+      socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token,appVersion:"v50"});
+    socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token,appVersion:"v50"});
       emitRoom(roomCode);
       socket.emit("toast", { message:"Connected" });
       return;
@@ -675,8 +675,8 @@ io.on("connection", socket => {
 
     ensureOwner(room);
     socket.join(roomCode);
-    socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
-    socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token});
+    socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token,appVersion:"v50"});
+    socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token,appVersion:"v50"});
     socket.emit("roomState", publicRoomState(roomCode));
     emitRoom(roomCode);
     emitToast(roomCode, `${cleanName(name || "Player")} joined the lobby`);
@@ -685,8 +685,8 @@ io.on("connection", socket => {
     roomCode=normaliseRoomCode(roomCode);
     const room=rooms[roomCode];
     if(!room || room.phase!=="lobby") return;
-    if(!isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can add bots.");
-    if(room.players.length>=4) return socket.emit("errorMessage","Room is already full.");
+    
+    if(room.players.length>=4) { emitRoom(roomCode); return; }
     if(!addBot(room, seatKey)) { emitRoom(roomCode); return; }
     emitRoom(roomCode);
   });
@@ -694,7 +694,7 @@ io.on("connection", socket => {
     roomCode=normaliseRoomCode(roomCode);
     const room=rooms[roomCode];
     if(!room || room.phase!=="lobby") return;
-    if(!isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can fill bot seats.");
+    
     while(room.players.length<4){
       if(!addBot(room)) break;
     }
@@ -790,7 +790,7 @@ io.on("connection", socket => {
     roomCode=normaliseRoomCode(roomCode);
     const room=rooms[roomCode];
     if(!room || room.phase!=="lobby") return;
-    if(!isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can remove bots.");
+    
     const idx = room.players.findIndex(p => p.isBot && p.seatKey === seatKey);
     if(idx >= 0){
       const old = room.players[idx];
