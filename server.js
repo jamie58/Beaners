@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
-const GAME_VERSION = 'v63';
+const GAME_VERSION = 'v64';
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 25000 });
@@ -102,7 +102,175 @@ function canAdd(meld,card,b){ const cards=[...meld.cards,card]; return meld.type
 function startRound(room){ room.deck=deck(); room.discard=[]; room.tableMelds=[]; room.winnerMessage=''; for(const p of room.players){ p.hand=[]; p.isDown=false; p.hasPickedUp=false; p.lastRoundScore=null; } for(let i=0;i<7;i++) for(const p of room.players){ const c=room.deck.pop(); if(c) p.hand.push(c); } const first=room.deck.pop(); if(first) room.discard.push(first); let idx=room.players.findIndex(p=>p.token===room.starterToken); if(idx<0) idx=0; room.currentPlayerIndex=idx; room.phase='playing'; room.turnStartedAt=Date.now(); }
 function nextTurn(room){ const p=current(room); if(p&&room.turnStartedAt){ p.turnMs += Date.now()-room.turnStartedAt; p.turnCount += 1; } if(p) p.hasPickedUp=false; room.currentPlayerIndex=(room.currentPlayerIndex+1)%room.players.length; room.turnStartedAt=Date.now(); }
 function endRound(roomCode,winner){ const room=rooms[roomCode]; const b=beaner(room.round); const dbl=room.round===13; const scores=[]; for(const p of room.players){ const s=p===winner?0:p.hand.reduce((sum,c)=>sum+scoreCard(c,b,dbl),0); p.lastRoundScore=s; p.totalScore+=s; scores.push({name:p.name,score:s,total:p.totalScore,avgTurnSeconds:p.turnCount?Math.round((p.turnMs/p.turnCount)/1000):0}); } room.roundScores.push({round:room.round,winner:winner.name,scores}); room.winnerMessage=`${winner.name} BEANERS!`; room.phase=room.round>=13?'gameOver':'roundOver'; if(room.phase==='gameOver'){ const champ=[...room.players].sort((a,b)=>a.totalScore-b.totalScore)[0]; room.winnerMessage=`${champ.name} wins the game!`; } emitRoom(roomCode); }
-function botTurn(roomCode){ const room=rooms[roomCode]; if(!room||room.phase!=='playing') return; const bot=current(room); if(!bot||!bot.isBot) return; setTimeout(()=>{ recycle(room); const drawn=room.deck.pop()||room.discard.pop(); if(drawn) bot.hand.push(drawn); bot.hasPickedUp=true; const discard=bot.hand.shift(); if(discard) room.discard.push(discard); if(!bot.hand.length) return endRound(roomCode,bot); nextTurn(room); emitRoom(roomCode); if(current(room)?.isBot) botTurn(roomCode); },800); }
+
+function combinations(arr, size){
+  const out=[];
+  function walk(start, combo){
+    if(combo.length===size){ out.push(combo.slice()); return; }
+    for(let i=start;i<arr.length;i++){
+      combo.push(arr[i]);
+      walk(i+1,combo);
+      combo.pop();
+    }
+  }
+  walk(0,[]);
+  return out;
+}
+
+function findBestMeld(cards, b){
+  // Prefer largest valid meld first, then any valid 3-card meld.
+  for(let size=Math.min(cards.length,5); size>=3; size--){
+    const combos=combinations(cards,size);
+    for(const combo of combos){
+      const type=meldType(combo,b);
+      if(type) return {cards:combo,type};
+    }
+  }
+  return null;
+}
+
+function botLayMelds(room, bot){
+  const b=beaner(room.round);
+  let changed=false;
+
+  // First meld or later melds: lay any valid meld available.
+  while(true){
+    const found=findBestMeld(bot.hand,b);
+    if(!found) break;
+
+    const ids=new Set(found.cards.map(c=>c.id));
+    bot.hand=bot.hand.filter(c=>!ids.has(c.id));
+    bot.isDown=true;
+    room.tableMelds.push({
+      id:crypto.randomBytes(5).toString('hex'),
+      ownerToken:bot.token,
+      ownerName:bot.name,
+      type:found.type,
+      cards:found.type==='run'?sortRun(found.cards,b):found.cards
+    });
+    changed=true;
+  }
+
+  return changed;
+}
+
+function botAddToExistingMelds(room, bot){
+  if(!bot.isDown) return false;
+  const b=beaner(room.round);
+  let changed=false;
+
+  let keepGoing=true;
+  while(keepGoing){
+    keepGoing=false;
+    for(const card of [...bot.hand]){
+      for(const meld of room.tableMelds){
+        if(canAdd(meld,card,b)){
+          bot.hand=bot.hand.filter(c=>c.id!==card.id);
+          meld.cards.push(card);
+          if(meld.type==='run') meld.cards=sortRun(meld.cards,b);
+          changed=true;
+          keepGoing=true;
+          break;
+        }
+      }
+      if(keepGoing) break;
+    }
+  }
+
+  return changed;
+}
+
+function discardScoreForBot(card, hand, b){
+  // Higher score means more likely to discard.
+  if(card.rank===b) return -9999; // do not throw Beaners unless literally unavoidable.
+
+  let score=0;
+  if(card.rank==='A') score+=15;
+  else if(['J','Q','K'].includes(card.rank)) score+=10;
+  else score+=Number(card.rank)||0;
+
+  // Keep pairs/sets together.
+  const sameRank=hand.filter(c=>c.id!==card.id && (c.rank===card.rank || c.rank===b)).length;
+  score-=sameRank*8;
+
+  // Keep suited neighbours together for possible runs.
+  const v=rankVal(card.rank);
+  const neighbours=hand.filter(c=>c.id!==card.id && c.suit===card.suit && Math.abs(rankVal(c.rank)-v)<=2).length;
+  score-=neighbours*6;
+
+  return score;
+}
+
+function chooseBotDiscard(bot, b){
+  if(bot.hand.length===1) return bot.hand[0];
+
+  const nonBeaners=bot.hand.filter(c=>c.rank!==b);
+  const candidates=nonBeaners.length?nonBeaners:bot.hand;
+  return candidates.sort((a,bb)=>discardScoreForBot(bb,bot.hand,b)-discardScoreForBot(a,bot.hand,b))[0];
+}
+
+function botTurn(code){
+  const room=rooms[code];
+  if(!room||room.phase!=='playing') return;
+  const bot=current(room);
+  if(!bot||!bot.isBot) return;
+
+  setTimeout(()=>{
+    const b=beaner(room.round);
+
+    // 1. Pick up if needed.
+    if(!bot.hasPickedUp){
+      recycle(room);
+
+      // Simple choice: take discard if it helps immediately, otherwise draw deck.
+      let tookDiscard=false;
+      const top=room.discard[room.discard.length-1];
+      if(top){
+        const test=[...bot.hand,top];
+        if(findBestMeld(test,b)){
+          const c=room.discard.pop();
+          if(c){ bot.hand.push(c); tookDiscard=true; }
+        }
+      }
+
+      if(!tookDiscard){
+        const drawn=room.deck.pop()||room.discard.pop();
+        if(drawn) bot.hand.push(drawn);
+      }
+
+      bot.hasPickedUp=true;
+    }
+
+    // 2. Lay first meld ASAP, then keep laying any extra melds.
+    botLayMelds(room,bot);
+
+    // 3. If already down, add cards to anyone's melds.
+    botAddToExistingMelds(room,bot);
+
+    // 4. If bot can go out, discard final card.
+    if(bot.hand.length===1 && bot.hasPickedUp){
+      const finalCard=bot.hand[0];
+      bot.hand=[];
+      room.discard.push(finalCard);
+      return endRound(code,bot);
+    }
+
+    // 5. Discard intelligently. Never throw Beaners unless unavoidable.
+    const discard=chooseBotDiscard(bot,b);
+    if(discard){
+      bot.hand=bot.hand.filter(c=>c.id!==discard.id);
+      room.discard.push(discard);
+    }
+
+    if(!bot.hand.length) return endRound(code,bot);
+
+    nextTurn(room);
+    emitRoom(code);
+    if(current(room)?.isBot) botTurn(code);
+  },900);
+}
+
+
 io.on('connection', socket=>{
   socket.on('createRoom',({name})=>{ const roomCode=code(); const p=makePlayer(socket,name); rooms[roomCode]={phase:'lobby',players:[p],round:1,deck:[],discard:[],tableMelds:[],currentPlayerIndex:0,starterToken:null,roundScores:[],winnerMessage:''}; socket.join(roomCode); socket.emit('joinedRoom',{roomCode,playerId:socket.id,playerToken:p.token,appVersion:GAME_VERSION}); socket.emit('roomReady',{roomCode,playerId:socket.id,playerToken:p.token,appVersion:GAME_VERSION}); emitRoom(roomCode); });
   socket.on('joinRoom',({roomCode,name,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return socket.emit('errorMessage','Room not found.'); if(room.phase!=='lobby') return socket.emit('errorMessage','Game already started.'); let p=playerToken?room.players.find(x=>!x.isBot&&x.token===playerToken):null; if(!p){ if(room.players.filter(x=>!x.isBot).length>=4) return socket.emit('errorMessage','Room is full.'); p=makePlayer(socket,name); room.players.push(p); } else { p.id=socket.id; p.connected=true; socket.data.playerToken=p.token; } socket.join(rc); socket.emit('joinedRoom',{roomCode:rc,playerId:socket.id,playerToken:p.token,appVersion:GAME_VERSION}); socket.emit('roomReady',{roomCode:rc,playerId:socket.id,playerToken:p.token,appVersion:GAME_VERSION}); emitRoom(rc); });

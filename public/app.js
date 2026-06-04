@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v63";
+  const VERSION = window.BEANERS_VERSION || "v64";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -239,7 +239,21 @@ const wheelColours = ["#e8c600", "#19a0b5", "#37a51f", "#c92a0a"];
     return order.map(seat => state.players.find(p => p.seat === seat)).filter(Boolean);
   }
 
-  function drawWheel(rotation=0) {
+  
+  function wheelWinnerByPointer(rotation=0) {
+    const players = seatedPlayers();
+    if (!players.length) return null;
+
+    // Pointer is at 12 o'clock. Canvas arcs start at 3 o'clock, so pointer angle is -90deg.
+    const pointerAngle = Math.PI * 1.5;
+    const twoPi = Math.PI * 2;
+    const normalized = ((pointerAngle - rotation) % twoPi + twoPi) % twoPi;
+    const slice = twoPi / players.length;
+    const index = Math.floor(normalized / slice) % players.length;
+    return players[index] || null;
+  }
+
+function drawWheel(rotation=0) {
     const canvas = $("starterWheel");
     const ctx = canvas.getContext("2d");
     const players = seatedPlayers();
@@ -294,21 +308,26 @@ const wheelColours = ["#e8c600", "#19a0b5", "#37a51f", "#c92a0a"];
     const players = seatedPlayers();
     const idx = players.findIndex(p => p.token === winnerToken || p.id === winnerToken);
     const slice = players.length ? Math.PI * 2 / players.length : Math.PI * 2;
+
+    // Rotate so the selected winner lands under the fixed pointer at 12 o'clock.
     const target = idx >= 0 ? (Math.PI * 1.5 - (idx * slice + slice/2)) : 0;
-    const spins = Math.PI * 2 * 4;
+    const spins = Math.PI * 2 * 5;
     const start = performance.now();
 
     function frame(now) {
-      const t = Math.min(1, (now - start) / 1800);
+      const t = Math.min(1, (now - start) / 2200);
       const ease = 1 - Math.pow(1 - t, 3);
-      const rot = spins * ease + target * ease;
-      drawWheel(rot);
+      drawWheel(spins * ease + target * ease);
+
       if (t < 1) requestAnimationFrame(frame);
       else {
         drawWheel(target);
-        $("wheelResult").textContent = `${winnerName} Starts!`;
+        const landed = wheelWinnerByPointer(target) || players[idx];
+        const finalName = landed?.name || winnerName;
+        $("wheelResult").textContent = `🎯 ${finalName} Starts!`;
       }
     }
+
     requestAnimationFrame(frame);
   }
 
@@ -590,7 +609,12 @@ function renderMeldCard(c) {
     socket.emit("seatAction", { roomCode, playerToken, seat: key, action });
   });
 
-  $("spinBtn").addEventListener("click", () => socket.emit("spinStarter", { roomCode }));
+  $("spinBtn").addEventListener("click", () => {
+    const players = seatedPlayers();
+    if (players.length < 2) return alert("Need at least 2 seated players or bots.");
+    const winner = players[Math.floor(Math.random() * players.length)];
+    socket.emit("spinStarter", { roomCode, starterToken: winner.token });
+  });
   $("startBtn").addEventListener("click", () => socket.emit("startGame", { roomCode }));
   if ($("refreshBtn")) $("refreshBtn").addEventListener("click", () => {
     socket.emit("requestRoomState", { roomCode, playerToken });
