@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v58";
+  const VERSION = window.BEANERS_VERSION || "v59";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -203,7 +203,41 @@
     return state.tableMelds.filter(m => m.ownerToken === token);
   }
 
-  function renderMeldCard(c) {
+  
+  function rankIndex(rank) {
+    return ["A","2","3","4","5","6","7","8","9","10","J","Q","K"].indexOf(rank);
+  }
+
+  function sortedRunCardsForDisplay(cards) {
+    if (!state || !cards || !cards.length) return cards || [];
+    const beaner = state.beaner;
+    const real = cards.filter(c => c.rank !== beaner).sort((a,b) => rankIndex(a.rank) - rankIndex(b.rank));
+    const beans = cards.filter(c => c.rank === beaner);
+    if (!real.length) return cards;
+
+    const result = [];
+    let beanIndex = 0;
+
+    for (let i = 0; i < real.length; i++) {
+      result.push(real[i]);
+      if (i < real.length - 1) {
+        const gap = rankIndex(real[i + 1].rank) - rankIndex(real[i].rank) - 1;
+        for (let g = 0; g < gap && beanIndex < beans.length; g++) {
+          result.push(beans[beanIndex++]);
+        }
+      }
+    }
+
+    while (beanIndex < beans.length) {
+      const firstVal = rankIndex(real[0].rank);
+      if (firstVal > 0) result.unshift(beans[beanIndex++]);
+      else result.push(beans[beanIndex++]);
+    }
+
+    return result;
+  }
+
+function renderMeldCard(c) {
     return createCard(c, true).outerHTML;
   }
 
@@ -252,14 +286,8 @@
       box.dataset.id = m.id;
       box.innerHTML = `
         <div class="meldLabel">${m.type.toUpperCase()}</div>
-        <div class="restoredMeldCards">${m.cards.map(renderMeldCard).join("")}</div>
+        <div class="restoredMeldCards">${(m.type === "run" ? sortedRunCardsForDisplay(m.cards) : m.cards).map(renderMeldCard).join("")}</div>
       `;
-      box.addEventListener("click", () => {
-        const ids = [...selected];
-        if (ids.length !== 1) return;
-        socket.emit("playOnMeld", { roomCode, playerToken, meldId: m.id, cardId: ids[0] });
-        selected.clear();
-      });
       meldEl.appendChild(box);
     });
   }
@@ -275,7 +303,7 @@
     $("scoreOverlay").classList.add("hidden");
     $("beanerBadge").textContent = state.beaner || "A";
 
-    $("deckCount").textContent = `${state.deckCount}/52`;
+    $("deckCount").textContent = state.deckCount;
 
     const top = state.discard[0];
     const topDiscard = $("topDiscard");
@@ -471,7 +499,13 @@
   });
 
 
-  function enableDragDropTargets() {
+  
+  function selectedCardIdForMeldDrop() {
+    const ids = [...selected];
+    return ids.length === 1 ? ids[0] : null;
+  }
+
+function enableDragDropTargets() {
     const discardTarget = $("topDiscard");
     if (discardTarget && !discardTarget.dataset.dragBound) {
       discardTarget.dataset.dragBound = "1";
@@ -489,24 +523,36 @@
     }
 
     document.querySelectorAll(".restoredMeld").forEach(meld => {
-      if (meld.dataset.dragBound) return;
-      meld.dataset.dragBound = "1";
-      meld.addEventListener("dragover", e => {
-        e.preventDefault();
-        meld.classList.add("dragOver");
-      });
-      meld.addEventListener("dragleave", () => meld.classList.remove("dragOver"));
-      meld.addEventListener("drop", e => {
-        e.preventDefault();
-        meld.classList.remove("dragOver");
-        const cardId = e.dataTransfer.getData("text/plain");
-        if (cardId) {
+      if (!meld.dataset.dragBound) {
+        meld.dataset.dragBound = "1";
+        meld.addEventListener("dragover", e => {
+          e.preventDefault();
+          meld.classList.add("dragOver");
+        });
+        meld.addEventListener("dragleave", () => meld.classList.remove("dragOver"));
+        meld.addEventListener("drop", e => {
+          e.preventDefault();
+          meld.classList.remove("dragOver");
+          const cardId = e.dataTransfer.getData("text/plain");
+          if (cardId) {
+            socket.emit("playOnMeld", { roomCode, playerToken, meldId: meld.dataset.id, cardId });
+            selected.clear();
+          }
+        });
+      }
+
+      if (!meld.dataset.tapBound) {
+        meld.dataset.tapBound = "1";
+        meld.addEventListener("click", () => {
+          const cardId = selectedCardIdForMeldDrop();
+          if (!cardId) return;
           socket.emit("playOnMeld", { roomCode, playerToken, meldId: meld.dataset.id, cardId });
           selected.clear();
-        }
-      });
+        });
+      }
     });
   }
+
 
   setInterval(updateTurnHighlightsLoop, 1000);
   setInterval(() => {

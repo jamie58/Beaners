@@ -1,13 +1,12 @@
-# Beaners v58 Deck / Drag / Clockwise Update
+# Beaners v59 Run / Drag / Meld Fix
 
-Built on v57.
+Built on v58.
 
-Changes:
-- Deck now uses a single 52-card deck instead of two decks.
-- Deck count displays as remaining/52.
-- Deck pile has a Beaners-style card-back design.
-- Drag hand cards onto discard to discard.
-- Drag hand cards onto existing melds to play onto them.
-- Gameplay player order is clockwise from the bottom seat:
-  bottom -> left -> top -> right.
-- Version/cache busting updated to v58.
+Fixes:
+- Deck display now shows only cards remaining, no /52.
+- Replaces deck generator with a true single 52-card deck.
+- Beaners in runs now display in the correct gap position, e.g. 2, Beaner, 4.
+- Server run sorting also places Beaners into natural gap order.
+- Drag hand cards onto any meld on the table, including other players' melds.
+- Tap fallback: select one card, then tap any meld to play onto it.
+- Version/cache busting updated to v59.

@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
-const GAME_VERSION = 'v58';
+const GAME_VERSION = 'v59';
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 25000 });
@@ -31,9 +31,71 @@ function makePlayer(socket,name){ const t=tok(); socket.data.playerToken=t; retu
 function addBot(room,seat){ if(room.players.length>=4) return false; if(room.players.some(p=>p.seat===seat)) return false; const used=new Set(room.players.map(p=>p.name)); const names=['Bob','Bean Bot','Barry Bot','Bella Bot']; const name=names.find(n=>!used.has(n))||`Bot ${room.players.length+1}`; room.players.push({id:`bot-${tok().slice(0,6)}`,token:`bot-${tok()}`,name,seat,isBot:true,connected:true,hand:[],isDown:false,totalScore:0,lastRoundScore:null,hasPickedUp:false,turnMs:0,turnCount:0}); return true; }
 function recycle(room){ if(room.deck.length||room.discard.length<=1) return; const top=room.discard.pop(); room.deck=shuffle(room.discard); room.discard=[top]; }
 function isSet(cards,b){ if(cards.length<3) return false; const real=cards.filter(c=>c.rank!==b); if(!real.length) return true; return real.every(c=>c.rank===real[0].rank); }
-function isRun(cards,b){ if(cards.length<3) return false; const real=cards.filter(c=>c.rank!==b); if(!real.length) return true; if(!real.every(c=>c.suit===real[0].suit)) return false; const vals=real.map(c=>rankVal(c.rank)).sort((a,b)=>a-b); for(let i=1;i<vals.length;i++) if(vals[i]===vals[i-1]) return false; let gaps=0; for(let i=1;i<vals.length;i++) gaps += vals[i]-vals[i-1]-1; return gaps <= cards.length-real.length; }
+function isRun(cards,beaner){
+  return canCardsFormRun(cards,beaner);
+}
+
+function sortedRunWithBeaners(cards, beaner){
+  const rankOrder=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const real=cards.filter(c=>c.rank!==beaner).sort((a,b)=>rankValue(a.rank)-rankValue(b.rank));
+  const beans=cards.filter(c=>c.rank===beaner);
+  if(!real.length) return cards;
+
+  const result=[];
+  let beanIndex=0;
+
+  for(let i=0;i<real.length;i++){
+    result.push(real[i]);
+
+    if(i<real.length-1){
+      const cur=rankValue(real[i].rank);
+      const nxt=rankValue(real[i+1].rank);
+      const gap=nxt-cur-1;
+      for(let g=0;g<gap && beanIndex<beans.length;g++){
+        result.push(beans[beanIndex++]);
+      }
+    }
+  }
+
+  while(beanIndex<beans.length){
+    // If beaners remain, place them where they extend the run most naturally.
+    // Put before the first real card if possible; otherwise after.
+    const firstVal=rankValue(real[0].rank);
+    if(firstVal>0) result.unshift(beans[beanIndex++]);
+    else result.push(beans[beanIndex++]);
+  }
+
+  return result;
+}
+
+function canCardsFormRun(cards, beaner){
+  if(cards.length<3) return false;
+  const real=cards.filter(c=>c.rank!==beaner);
+  const beans=cards.length-real.length;
+  if(!real.length) return true;
+  if(!real.every(c=>c.suit===real[0].suit)) return false;
+
+  const vals=real.map(c=>rankValue(c.rank)).sort((a,b)=>a-b);
+  for(let i=1;i<vals.length;i++){
+    if(vals[i]===vals[i-1]) return false;
+  }
+
+  let gaps=0;
+  for(let i=1;i<vals.length;i++) gaps += vals[i]-vals[i-1]-1;
+  if(gaps>beans) return false;
+
+  const min=vals[0];
+  const max=vals[vals.length-1];
+  const totalSpan = max-min+1;
+  const naturalLength = totalSpan + (beans-gaps);
+  return naturalLength <= 13;
+}
+
 function meldType(cards,b){ if(isSet(cards,b)) return 'set'; if(isRun(cards,b)) return 'run'; return null; }
-function sortRun(cards,b){ return [...cards].sort((a,c)=>a.rank===b?1:c.rank===b?-1:rankVal(a.rank)-rankVal(c.rank)); }
+function sortRun(cards,beaner){
+  return sortedRunWithBeaners(cards,beaner);
+}
+
 function canAdd(meld,card,b){ const cards=[...meld.cards,card]; return meld.type==='set'?isSet(cards,b):isRun(cards,b); }
 function startRound(room){ room.deck=deck(); room.discard=[]; room.tableMelds=[]; room.winnerMessage=''; for(const p of room.players){ p.hand=[]; p.isDown=false; p.hasPickedUp=false; p.lastRoundScore=null; } for(let i=0;i<7;i++) for(const p of room.players){ const c=room.deck.pop(); if(c) p.hand.push(c); } const first=room.deck.pop(); if(first) room.discard.push(first); let idx=room.players.findIndex(p=>p.token===room.starterToken); if(idx<0) idx=0; room.currentPlayerIndex=idx; room.phase='playing'; room.turnStartedAt=Date.now(); }
 function nextTurn(room){ const p=current(room); if(p&&room.turnStartedAt){ p.turnMs += Date.now()-room.turnStartedAt; p.turnCount += 1; } if(p) p.hasPickedUp=false; room.currentPlayerIndex=(room.currentPlayerIndex+1)%room.players.length; room.turnStartedAt=Date.now(); }
