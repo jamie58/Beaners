@@ -415,7 +415,7 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
 }
 
 
-/* v54 hand / refresh / round fixes */
+/* v56 server-start + hand visibility fix */
 .refreshBtn{
   display:inline-flex !important;
   align-items:center !important;
@@ -428,40 +428,37 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
   font-size:22px !important;
 }
 
-.table:not(.hidden) .handPanel,
-.table:not(.hidden) .restoredHandPanel{
+.handPanel,
+.restoredHandPanel{
   display:block !important;
   visibility:visible !important;
   opacity:1 !important;
+  min-height:148px !important;
   position:relative !important;
-  z-index:40 !important;
+  z-index:100 !important;
 }
 
-.table:not(.hidden) #hand{
+.hand,
+#hand{
   display:flex !important;
   visibility:visible !important;
   opacity:1 !important;
+  min-height:92px !important;
+  overflow-x:auto !important;
+  align-items:flex-start !important;
+  gap:6px !important;
 }
 
-.table:not(.hidden) #hand .card{
+#hand .card{
   display:flex !important;
   visibility:visible !important;
   opacity:1 !important;
+  flex:0 0 auto !important;
 }
 
-.handPanel{
-  min-height:132px;
-}
-
-.hand{
-  min-height:88px;
-  align-items:flex-start;
-}
-
-.card{
-  flex:0 0 auto;
-}
-
-.card.selected{
-  z-index:45;
+.emptyHandNotice{
+  color:#24104f;
+  font-weight:1000;
+  padding:18px 12px;
+  opacity:.7;
 }

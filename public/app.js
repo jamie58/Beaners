@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v54";
+  const VERSION = window.BEANERS_VERSION || "v56";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -297,11 +297,43 @@
     ["top","left","right","bottom"].forEach(renderZone);
 
     renderHand();
+  }
 
-    const me = currentPlayer();
-    if (me && me.cardCount > 0 && hand.length === 0) {
-      requestMyHand();
+  function requestMyHand() {
+    if (!roomCode || !playerToken) return;
+    socket.emit('getHand', { roomCode, playerToken });
+    socket.emit('forceHand', { roomCode, playerToken });
+  }
+
+  function renderHand() {
+    const el = $('hand');
+    if (!el) return;
+    el.innerHTML = '';
+
+    const panel = document.querySelector('.handPanel');
+    if (panel) {
+      panel.classList.remove('hidden');
+      panel.style.display = 'block';
+      panel.style.visibility = 'visible';
+      panel.style.opacity = '1';
     }
+
+    if (!hand || !hand.length) {
+      const me = currentPlayer();
+      el.innerHTML = `<div class="emptyHandNotice">${me && me.cardCount ? `Loading ${me.cardCount} cards...` : 'No cards in hand'}</div>`;
+      if (me && me.cardCount > 0) setTimeout(requestMyHand, 250);
+      return;
+    }
+
+    hand.forEach(c => {
+      const card = createCard(c);
+      if (selected.has(c.id)) card.classList.add('selected');
+      card.addEventListener('click', () => {
+        selected.has(c.id) ? selected.delete(c.id) : selected.add(c.id);
+        renderHand();
+      });
+      el.appendChild(card);
+    });
   }
 
   function renderScore() {
@@ -309,17 +341,10 @@
     $("table").classList.add("hidden");
     $("scoreOverlay").classList.remove("hidden");
     $("scoreTitle").textContent = state.winnerMessage || "Round Over";
-    if ($("nextRoundBtn")) $("nextRoundBtn").textContent = state.phase === "roundOver" ? "Next Round" : "Restart Round";
     const latest = state.roundScores[state.roundScores.length - 1];
     $("scoreRows").innerHTML = latest ? latest.scores.map(s => `
       <div class="scoreRow"><span>${escapeHtml(s.name)}</span><span>+${s.score}</span><strong>${s.total}</strong></div>
     `).join("") : "";
-  }
-
-
-  function requestMyHand() {
-    if (!roomCode || !playerToken) return;
-    socket.emit("getHand", { roomCode, playerToken });
   }
 
   function render() {
@@ -349,11 +374,11 @@
   socket.on("roomState", s => {
     state = s;
     render();
-    if (state && state.phase === "playing") requestMyHand();
+    if (state && state.phase === 'playing') requestMyHand();
   });
 
   socket.on("yourHand", h => {
-    hand = h || [];
+    hand = Array.isArray(h) ? h : [];
     const valid = new Set(hand.map(c => c.id));
     selected = new Set([...selected].filter(id => valid.has(id)));
     renderHand();
@@ -397,7 +422,10 @@
 
   $("spinBtn").addEventListener("click", () => socket.emit("spinStarter", { roomCode }));
   $("startBtn").addEventListener("click", () => socket.emit("startGame", { roomCode }));
-  $("refreshBtn").addEventListener("click", () => { socket.emit("requestRoomState", { roomCode, playerToken }); requestMyHand(); });
+  $("refreshBtn").addEventListener("click", () => {
+    socket.emit("requestRoomState", { roomCode, playerToken });
+    requestMyHand();
+  });
   $("exitBtn").addEventListener("click", () => {
     if (confirm("Exit game?")) socket.emit("exitGame", { roomCode, playerToken });
   });
@@ -434,9 +462,15 @@
   });
 
   $("nextRoundBtn").addEventListener("click", () => {
-    if (state && state.phase === "roundOver") socket.emit("nextRound", { roomCode });
+    if (state && state.phase === 'roundOver') socket.emit("nextRound", { roomCode });
     else socket.emit("restartRound", { roomCode });
   });
 
   setInterval(updateTurnHighlightsLoop, 1000);
+  setInterval(() => {
+    if (state && state.phase === 'playing') {
+      const me = currentPlayer();
+      if (me && me.cardCount > 0 && (!hand || hand.length === 0)) requestMyHand();
+    }
+  }, 1500);
 })();

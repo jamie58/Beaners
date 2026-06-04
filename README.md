@@ -1,11 +1,11 @@
-# Beaners v54 Hand / Refresh / Round Fix
+# Beaners v56 Server Start + Hand Fix
 
-Built on v53.
+Built from v53 playing field restoration.
 
 Fixes:
-- Requests and renders the player's hand after game start and every room state update.
-- Adds/ensures top-bar refresh button.
-- Refresh requests both room state and hand.
-- Next Round / Restart Round button now works more reliably.
-- Adds a restartRound server event for testing/recovery.
-- Version labels updated to v54.
+- Removes bad top-level socket.on crash.
+- Adds getHand/forceHand inside Socket.IO connection.
+- Fixes missing renderHand function.
+- Requests hand after room state/start/refresh.
+- Adds restartRound fallback.
+- Version labels/cache busting updated to v56.
