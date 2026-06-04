@@ -528,6 +528,15 @@ function isOwner(room, socket){
   return !!owner && socket.data?.playerToken === owner.token;
 }
 io.on("connection", socket => {
+  socket.on("requestRoomState", ({roomCode}) => {
+    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
+    const room = rooms[roomCode];
+    if(!room) return socket.emit("errorMessage","Room not found.");
+    socket.emit("roomState", publicRoomState(roomCode));
+    const p = room.players.find(player => player.id === socket.id || (!player.isBot && socket.data?.playerToken && player.token === socket.data.playerToken));
+    if(p) socket.emit("yourHand", p.hand);
+  });
+
   socket.on("createRoom", ({name})=>{
     console.log("createRoom requested", { socketId: socket.id, name });
     const roomCode = createRoomCode();
@@ -565,6 +574,7 @@ io.on("connection", socket => {
     socket.join(roomCode);
     socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
     socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token});
+    socket.emit("roomState", publicRoomState(roomCode));
     emitRoom(roomCode);
     console.log("room created", roomCode);
   });
@@ -617,6 +627,7 @@ io.on("connection", socket => {
     socket.join(roomCode);
     socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
     socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token});
+    socket.emit("roomState", publicRoomState(roomCode));
     emitRoom(roomCode);
     emitToast(roomCode, `${cleanName(name || "Player")} joined the lobby`);
   });
@@ -868,6 +879,7 @@ io.on("connection", socket => {
     socket.join(roomCode);
     socket.emit("joinedRoom", { roomCode, playerId: socket.id, playerToken });
     socket.emit("roomReady", { roomCode, playerId: socket.id, playerToken });
+    socket.emit("roomState", publicRoomState(roomCode));
     emitRoom(roomCode);
     socket.emit("toast", { message: "Connected" });
   });

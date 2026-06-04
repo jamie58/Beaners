@@ -2734,3 +2734,35 @@ body{
   opacity:.65;
   margin-top:6px;
 }
+
+/* v41 lobby state/UI fix */
+#playingControls.hidden{
+  display:none !important;
+}
+
+body:has(#lobbyControls:not(.hidden)) #playingControls{
+  display:none !important;
+}
+
+.seatMapLeft .seatName,
+.seatMapLeft .seatAction{
+  transform:rotate(-90deg);
+}
+
+.seatMapRight .seatName,
+.seatMapRight .seatAction{
+  transform:rotate(90deg);
+}
+
+.seatMapLeft,
+.seatMapRight{
+  overflow:hidden;
+}
+
+.lobbySeat.emptySeat .seatAction{
+  color:#fde047;
+}
+
+.lobbySeat.botSeat .seatAction{
+  color:#fca5a5;
+}

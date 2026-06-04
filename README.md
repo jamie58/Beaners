@@ -1,8 +1,9 @@
-# Beaners v40 Create/Join RoomReady Fallback
+# Beaners v41 Lobby State/UI Fix
 
 Fixes:
-- Server now emits a dedicated roomReady event after create/join.
-- Client listens for roomReady and force-enters the lobby.
-- start.js displays connection/create/join status under the buttons.
-- If the button greys out and no room appears, the status text will now say whether the server responded.
-- v40 added to splash/start debug.
+- Hides hand/action controls while in lobby.
+- Requests full room state after roomReady.
+- Shows joined players in the lobby list.
+- Seat buttons can sit yourself, add bots, and remove bots.
+- Left/right seat labels rotated for readability.
+- Adds v41 to splash/debug text.
