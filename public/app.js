@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v61";
+  const VERSION = window.BEANERS_VERSION || "v63";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -11,7 +11,143 @@
   let hand = [];
   let selected = new Set();
 
-  const wheelColours = ["#e8c600", "#19a0b5", "#37a51f", "#c92a0a"];
+  
+  
+  let v63Drag = null;
+
+  function v63CardFromElement(el) {
+    const cardEl = el.closest(".card");
+    if (!cardEl) return null;
+    const id = cardEl.dataset.id;
+    if (!id) return null;
+    const card = hand.find(c => c.id === id);
+    return card ? { id, card, el: cardEl } : null;
+  }
+
+  function v63StartPointerDrag(ev, cardEl, cardId) {
+    if (!cardId || !cardEl) return;
+    if (ev.pointerType === "mouse" && ev.button !== 0) return;
+
+    const rect = cardEl.getBoundingClientRect();
+    const ghost = cardEl.cloneNode(true);
+    ghost.classList.add("dragGhost");
+    ghost.style.width = `${rect.width}px`;
+    ghost.style.height = `${rect.height}px`;
+    ghost.style.left = `${rect.left}px`;
+    ghost.style.top = `${rect.top}px`;
+    document.body.appendChild(ghost);
+
+    v63Drag = {
+      cardId,
+      ghost,
+      startX: ev.clientX,
+      startY: ev.clientY,
+      offsetX: ev.clientX - rect.left,
+      offsetY: ev.clientY - rect.top,
+      moved: false,
+      source: cardEl
+    };
+
+    cardEl.classList.add("dragSource");
+    try { cardEl.setPointerCapture(ev.pointerId); } catch(e) {}
+  }
+
+  function v63MovePointerDrag(ev) {
+    if (!v63Drag) return;
+
+    const dx = Math.abs(ev.clientX - v63Drag.startX);
+    const dy = Math.abs(ev.clientY - v63Drag.startY);
+    if (dx > 4 || dy > 4) v63Drag.moved = true;
+
+    v63Drag.ghost.style.left = `${ev.clientX - v63Drag.offsetX}px`;
+    v63Drag.ghost.style.top = `${ev.clientY - v63Drag.offsetY}px`;
+
+    document.querySelectorAll(".dragOver").forEach(el => el.classList.remove("dragOver"));
+
+    v63Drag.ghost.style.pointerEvents = "none";
+    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    const meld = under?.closest?.(".restoredMeld");
+    const discard = under?.closest?.("#topDiscard");
+
+    if (meld) meld.classList.add("dragOver");
+    if (discard) discard.classList.add("dragOver");
+
+    ev.preventDefault();
+  }
+
+  function v63EndPointerDrag(ev) {
+    if (!v63Drag) return;
+
+    const drag = v63Drag;
+    v63Drag = null;
+
+    document.querySelectorAll(".dragOver").forEach(el => el.classList.remove("dragOver"));
+    if (drag.source) drag.source.classList.remove("dragSource");
+
+    drag.ghost.style.pointerEvents = "none";
+    const under = document.elementFromPoint(ev.clientX, ev.clientY);
+    const meld = under?.closest?.(".restoredMeld");
+    const discard = under?.closest?.("#topDiscard");
+
+    if (drag.ghost?.parentNode) drag.ghost.parentNode.removeChild(drag.ghost);
+
+    // If it was basically a tap, keep the normal select-card behaviour.
+    if (!drag.moved) return;
+
+    if (meld?.dataset?.id) {
+      socket.emit("meldAdd", { roomCode, playerToken, meldId: meld.dataset.id, cardId: drag.cardId });
+      selected.clear();
+      v62RefreshMeldHints?.();
+      renderHand();
+      ev.preventDefault();
+      return;
+    }
+
+    if (discard) {
+      socket.emit("discard", { roomCode, playerToken, cardId: drag.cardId });
+      selected.clear();
+      v62RefreshMeldHints?.();
+      renderHand();
+      ev.preventDefault();
+      return;
+    }
+  }
+
+  function v63CancelPointerDrag() {
+    if (!v63Drag) return;
+    if (v63Drag.ghost?.parentNode) v63Drag.ghost.parentNode.removeChild(v63Drag.ghost);
+    if (v63Drag.source) v63Drag.source.classList.remove("dragSource");
+    v63Drag = null;
+    document.querySelectorAll(".dragOver").forEach(el => el.classList.remove("dragOver"));
+  }
+
+function v62SelectedCardId() {
+    const ids = Array.from(selected || []);
+    return ids.length === 1 ? ids[0] : null;
+  }
+
+  function v62RefreshMeldHints() {
+    const ready = !!v62SelectedCardId();
+    document.querySelectorAll(".restoredMeld").forEach(m => {
+      m.classList.toggle("tapDropReady", ready);
+      m.title = ready ? "Tap to add selected card" : "Select one card, then tap this meld";
+    });
+  }
+
+  function v62AddSelectedToMeld(meldEl) {
+    if (!meldEl) return false;
+    const cardId = v62SelectedCardId();
+    const meldId = meldEl.dataset.id;
+    if (!cardId || !meldId) return false;
+
+    socket.emit("meldAdd", { roomCode, playerToken, meldId, cardId });
+    selected.clear();
+    v62RefreshMeldHints();
+    renderHand();
+    return true;
+  }
+
+const wheelColours = ["#e8c600", "#19a0b5", "#37a51f", "#c92a0a"];
 
   function saveSession(data) {
     if (!data) return;
@@ -355,10 +491,14 @@ function renderMeldCard(c) {
       const card = createCard(c);
       card.draggable = true;
       card.addEventListener('dragstart', ev => { ev.dataTransfer.setData('text/plain', c.id); });
+      card.addEventListener('pointerdown', ev => v63StartPointerDrag(ev, card, c.id));
+      card.addEventListener('pointermove', v63MovePointerDrag);
+      card.addEventListener('pointerup', v63EndPointerDrag);
+      card.addEventListener('pointercancel', v63CancelPointerDrag);
       if (selected.has(c.id)) card.classList.add('selected');
-      card.addEventListener('click', () => {
+      card.addEventListener('click', () => { if (v63Drag) return;
         selected.has(c.id) ? selected.delete(c.id) : selected.add(c.id);
-        refreshMeldDropHints();
+        v62RefreshMeldHints();
         renderHand();
       });
       el.appendChild(card);
@@ -599,7 +739,74 @@ function enableDragDropTargets() {
 
 
   setInterval(updateTurnHighlightsLoop, 1000);
-  setInterval(() => {
+  
+  function v62MeldTapHandler(e) {
+    const meld = e.target.closest(".restoredMeld");
+    if (!meld) return;
+
+    if (v62SelectedCardId()) {
+      e.preventDefault();
+      e.stopPropagation();
+      v62AddSelectedToMeld(meld);
+    }
+  }
+
+  document.addEventListener('click', v62MeldTapHandler, true);
+  document.addEventListener('pointerup', v62MeldTapHandler, true);
+
+  document.addEventListener('dragover', e => {
+    const meld = e.target.closest(".restoredMeld");
+    const discard = e.target.closest("#topDiscard");
+    if (meld || discard) {
+      e.preventDefault();
+      (meld || discard).classList.add("dragOver");
+    }
+  }, true);
+
+  document.addEventListener('dragleave', e => {
+    const meld = e.target.closest(".restoredMeld");
+    const discard = e.target.closest("#topDiscard");
+    if (meld || discard) (meld || discard).classList.remove("dragOver");
+  }, true);
+
+  document.addEventListener('drop', e => {
+    const meld = e.target.closest(".restoredMeld");
+    const discard = e.target.closest("#topDiscard");
+    if (!meld && !discard) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const cardId = e.dataTransfer.getData("text/plain");
+    if (!cardId) return;
+
+    if (meld) {
+      meld.classList.remove("dragOver");
+      socket.emit("meldAdd", { roomCode, playerToken, meldId: meld.dataset.id, cardId });
+      selected.clear();
+      v62RefreshMeldHints();
+      renderHand();
+      return;
+    }
+
+    if (discard) {
+      discard.classList.remove("dragOver");
+      socket.emit("discard", { roomCode, playerToken, cardId });
+    }
+  }, true);
+
+  socket.on("meldAddOk", () => {
+    selected.clear();
+    v62RefreshMeldHints();
+    requestMyHand();
+  });
+
+
+  document.addEventListener('pointermove', v63MovePointerDrag, { passive:false });
+  document.addEventListener('pointerup', v63EndPointerDrag, { passive:false });
+  document.addEventListener('pointercancel', v63CancelPointerDrag, { passive:false });
+
+setInterval(() => {
     if (state && state.phase === 'playing') {
       const me = currentPlayer();
       if (me && me.cardCount > 0 && (!hand || hand.length === 0)) requestMyHand();

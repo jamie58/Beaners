@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
-const GAME_VERSION = 'v61';
+const GAME_VERSION = 'v63';
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 25000 });
@@ -116,6 +116,30 @@ io.on('connection', socket=>{
   socket.on('takeDiscardPile',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(p.hasPickedUp) return socket.emit('errorMessage','You have already picked up.'); p.hand.push(...room.discard); room.discard=[]; p.hasPickedUp=true; emitRoom(rc); });
   socket.on('layMeld',({roomCode,playerToken,cardIds})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p) return; const b=beaner(room.round); const cards=cardIds.map(id=>p.hand.find(c=>c.id===id)).filter(Boolean); const type=meldType(cards,b); if(!type) return socket.emit('errorMessage','That is not a valid meld.'); p.hand=p.hand.filter(c=>!cardIds.includes(c.id)); p.isDown=true; room.tableMelds.push({id:crypto.randomBytes(5).toString('hex'),ownerToken:p.token,ownerName:p.name,type,cards:type==='run'?sortRun(cards,b):cards}); emitRoom(rc); });
   socket.on('addToMeld',({roomCode,playerToken,meldId,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||!p.isDown) return socket.emit('errorMessage','Lay your first meld before adding to any meld.'); const c=p.hand.find(x=>x.id===cardId); const m=room.tableMelds.find(x=>x.id===meldId); if(!c||!m) return; const b=beaner(room.round); if(!canAdd(m,c,b)) return socket.emit('errorMessage','Card does not fit that meld.'); p.hand=p.hand.filter(x=>x.id!==cardId); m.cards.push(c); if(m.type==='run') m.cards=sortRun(m.cards,b); emitRoom(rc); });
+
+  socket.on('meldAdd',({roomCode,playerToken,meldId,cardId})=>{
+    const rc=cleanCode(roomCode);
+    const room=rooms[rc];
+    if(!room||room.phase!=='playing') return;
+
+    const p=player(room,socket,playerToken);
+    if(!p) return socket.emit('errorMessage','Could not identify your player.');
+    if(!p.isDown) return socket.emit('errorMessage','Lay your first meld before adding to any meld.');
+
+    const c=p.hand.find(x=>x.id===cardId);
+    const m=room.tableMelds.find(x=>x.id===meldId);
+    if(!c||!m) return;
+
+    const b=beaner(room.round);
+    if(!canAdd(m,c,b)) return socket.emit('errorMessage','Card does not fit that meld.');
+
+    p.hand=p.hand.filter(x=>x.id!==cardId);
+    m.cards.push(c);
+    if(m.type==='run') m.cards=sortRun(m.cards,b);
+
+    socket.emit('meldAddOk',{meldId,cardId});
+    emitRoom(rc);
+  });
 
   socket.on('playOnMeld',({roomCode,playerToken,meldId,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||!p.isDown) return socket.emit('errorMessage','Lay your first meld before adding to any meld.'); const c=p.hand.find(x=>x.id===cardId); const m=room.tableMelds.find(x=>x.id===meldId); if(!c||!m) return; const b=beaner(room.round); if(!canAdd(m,c,b)) return socket.emit('errorMessage','Card does not fit that meld.'); p.hand=p.hand.filter(x=>x.id!==cardId); m.cards.push(c); if(m.type==='run') m.cards=sortRun(m.cards,b); emitRoom(rc); });
   socket.on('discard',({roomCode,playerToken,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(!p.hasPickedUp&&!(p.isDown&&p.hand.length===1)) return socket.emit('errorMessage','Pick up before discarding.'); const idx=p.hand.findIndex(c=>c.id===cardId); if(idx<0) return; const [c]=p.hand.splice(idx,1); room.discard.push(c); if(p.hand.length===0) return endRound(rc,p); nextTurn(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });

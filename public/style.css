@@ -716,3 +716,71 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
 .card[draggable="true"]:active{
   cursor:grabbing !important;
 }
+
+
+/* v62 reliable meld tap/drop */
+.restoredMeld{
+  cursor:pointer !important;
+  touch-action:manipulation !important;
+  position:relative !important;
+}
+
+.restoredMeld.tapDropReady{
+  outline:4px dashed #22c55e !important;
+  box-shadow:0 0 18px rgba(34,197,94,.55) !important;
+}
+
+.restoredMeld.tapDropReady::before{
+  content:"Tap to add";
+  position:absolute;
+  top:-10px;
+  right:4px;
+  background:#22c55e;
+  color:white;
+  font-size:9px;
+  font-weight:1000;
+  border-radius:999px;
+  padding:2px 5px;
+  z-index:20;
+}
+
+.restoredMeld.dragOver,
+#topDiscard.dragOver{
+  outline:5px solid #22c55e !important;
+  box-shadow:0 0 22px rgba(34,197,94,.75) !important;
+  transform:scale(1.03);
+}
+
+.card.selected{
+  transform:translateY(-12px) !important;
+  outline:5px solid #22c55e !important;
+  box-shadow:0 0 18px rgba(34,197,94,.75) !important;
+}
+
+
+/* v63 custom pointer drag */
+#hand .card{
+  touch-action:none !important;
+  user-select:none !important;
+  -webkit-user-select:none !important;
+}
+
+.dragGhost{
+  position:fixed !important;
+  z-index:9999 !important;
+  pointer-events:none !important;
+  opacity:.92 !important;
+  transform:scale(1.08) rotate(2deg);
+  box-shadow:0 14px 32px rgba(0,0,0,.38) !important;
+}
+
+.dragSource{
+  opacity:.35 !important;
+}
+
+.restoredMeld.dragOver,
+#topDiscard.dragOver{
+  outline:5px solid #22c55e !important;
+  box-shadow:0 0 24px rgba(34,197,94,.85) !important;
+  transform:scale(1.03);
+}
