@@ -113,7 +113,27 @@ let audioContext = null;
 let lastHandCount = 0;
 let handSortMode = localStorage.getItem('beanersSortMode') || 'none';
 
-const $ = id => document.getElementById(id);
+const missingElement = {
+  classList:{ add(){}, remove(){}, contains(){ return false; }, toggle(){} },
+  style:{},
+  dataset:{},
+  value:"",
+  textContent:"",
+  innerHTML:"",
+  checked:false,
+  disabled:false,
+  onclick:null,
+  onchange:null,
+  addEventListener(){},
+  removeEventListener(){},
+  appendChild(){},
+  remove(){},
+  querySelector(){ return null; },
+  querySelectorAll(){ return []; },
+  setAttribute(){},
+  getAttribute(){ return null; }
+};
+const $ = id => document.getElementById(id) || missingElement;
 
 function showToast(message){
   const el = $("toast");
@@ -127,17 +147,6 @@ function showToast(message){
 socket.on("toast", ({message}) => showToast(message));
 
 
-$("createBtn").onclick = () => socket.emit("createRoom", { 
-  name: $("nameInput").value.trim() || "Player",
-  playerToken: localStorage.getItem(SESSION_TOKEN_KEY)
-});
-$("joinBtn").onclick = () => socket.emit("joinRoom", { 
-  roomCode: $("roomInput").value.replace(/\D/g, "").trim(), 
-  name: $("nameInput").value.trim() || "Player",
-  playerToken: localStorage.getItem(SESSION_TOKEN_KEY)
-});
-$("addBotBtn").onclick = () => socket.emit("addBot", { roomCode: currentRoomCode });
-$("fillBotsBtn").onclick = () => socket.emit("fillBots", { roomCode: currentRoomCode });
 $("spinBtn").onclick = () => socket.emit("spinStarter", { roomCode: currentRoomCode || latestState?.roomCode || localStorage.getItem(SESSION_ROOM_KEY) });
 $("startBtn").onclick = () => socket.emit("startGame", { roomCode: currentRoomCode || latestState?.roomCode || localStorage.getItem(SESSION_ROOM_KEY) });
 $("drawDeckBtn").onclick = () => { playSound("pickup"); vibrate(20); socket.emit("drawFromDeck", { roomCode: currentRoomCode }); };
@@ -321,6 +330,7 @@ window.beanersEnterRoom = function({roomCode, playerId, playerToken}){
 
   if(typeof hideSplashScreen === "function") hideSplashScreen();
   if(typeof showToast === "function") showToast("Room ready");
+  socket.emit("requestRoomState", { roomCode });
 };
 
 socket.on("roomReady", data => {

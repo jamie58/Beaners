@@ -1,7 +1,6 @@
 
 (() => {
   const $ = (id) => document.getElementById(id);
-  let latestLobbyState = null;
 
   function safeName(){
     return ($("nameInput")?.value || "").trim() || "Player";
@@ -9,6 +8,14 @@
 
   function cleanRoom(){
     return ($("roomInput")?.value || "").replace(/\D/g, "").slice(0, 4);
+  }
+
+  function getTokenKey(){
+    return "beanersPlayerToken";
+  }
+
+  function getRoomKey(){
+    return "beanersRoomCode";
   }
 
   function getSocket(){
@@ -28,72 +35,120 @@
   }
 
   function enterRoom(data){
-    if(window.beanersEnterRoom) window.beanersEnterRoom(data);
+    if(!data || !data.roomCode) return;
+
+    localStorage.setItem(getRoomKey(), data.roomCode);
     localStorage.setItem("beanersRoom", data.roomCode);
     localStorage.setItem("beanersPlayerId", data.playerId);
-    if(data.playerToken) localStorage.setItem("beanersPlayerToken", data.playerToken);
+    if(data.playerToken) localStorage.setItem(getTokenKey(), data.playerToken);
 
-    $("lobby")?.classList.add("hidden");
-    $("game")?.classList.remove("hidden");
-    $("lobbyControls")?.classList.remove("hidden");
-    $("playingControls")?.classList.add("hidden");
+    const lobby = $("lobby");
+    const game = $("game");
+    const lobbyControls = $("lobbyControls");
+    const playingControls = $("playingControls");
+    const roomCodeEl = $("roomCode");
+    const copyRoomBtn = $("copyRoomBtn");
+
+    lobby?.classList.add("hidden");
+    game?.classList.remove("hidden");
+    lobbyControls?.classList.remove("hidden");
+    playingControls?.classList.add("hidden");
+    document.body.classList.add("inLobbyMode");
+
+    if(roomCodeEl) roomCodeEl.textContent = data.roomCode;
+    if(copyRoomBtn) copyRoomBtn.textContent = data.roomCode;
+
+    if(window.beanersEnterRoom) {
+      try { window.beanersEnterRoom(data); } catch(e) { console.error("beanersEnterRoom failed", e); }
+    }
 
     const socket = getSocket();
     socket?.emit("requestRoomState", { roomCode:data.roomCode });
+
+    showStartDebug("Room " + data.roomCode + " ready");
   }
 
-  function renderLobby(state){
-    latestLobbyState = state;
-    if(!state || state.phase !== "lobby") return;
-    document.body.classList.add("inLobbyMode");
+  function bind(){
+    const socket = getSocket();
+    if(!socket) return;
 
-    $("lobbyControls")?.classList.remove("hidden");
-    $("playingControls")?.classList.add("hidden");
+    if(!socket.__beanersV44Bound){
+      socket.__beanersV44Bound = true;
 
-    const labels = {top:"Top", left:"Left", right:"Right", bottom:"Bottom"};
-    const humans = state.players.filter(p => !p.isBot);
-    const unseatedBox = $("lobbyUnseatedNames");
+      socket.on("connect", () => showStartDebug("Connected v44"));
+      socket.on("connect_error", err => showStartDebug("Connect error: " + err.message));
 
-    if(unseatedBox){
-      unseatedBox.innerHTML = humans.length
-        ? humans.map(p => `${p.isOwner ? "👑 " : ""}${escapeHtmlLocal(p.name)}${p.seatKey ? "" : " <small>(not seated)</small>"}`).join("<br>")
-        : "Waiting...";
+      socket.on("roomReady", enterRoom);
+      socket.on("joinedRoom", enterRoom);
+
+      socket.on("errorMessage", message => {
+        showStartDebug("Error: " + message);
+      });
     }
 
-    document.querySelectorAll(".lobbySeat").forEach(btn => {
-      if(btn.dataset.v42Bound) return;
-      btn.dataset.v42Bound = "1";
-      btn.addEventListener("click", event => {
-        const state = latestLobbyState;
-        if(!state) return;
+    const createBtn = $("createBtn");
+    const joinBtn = $("joinBtn");
+    const roomInput = $("roomInput");
 
-        const seatKey = btn.dataset.seat;
-        const occupant = state.players.find(p => p.seatKey === seatKey);
-        const roomCode = state.roomCode || localStorage.getItem("beanersRoom");
-        const actionButton = event.target.closest(".seatMiniAction");
-        const action = actionButton?.dataset.action;
+    if(roomInput && !roomInput.dataset.v44Bound){
+      roomInput.dataset.v44Bound = "1";
+      roomInput.addEventListener("input", () => {
+        roomInput.value = cleanRoom();
+      });
+    }
 
+    if(createBtn && !createBtn.dataset.v44Bound){
+      createBtn.dataset.v44Bound = "1";
+      createBtn.addEventListener("click", event => {
         event.preventDefault();
         event.stopPropagation();
 
-        if(action === "addBot"){
-          socket.emit("seatAction", { roomCode, seatKey, action:"addBot" });
-          return;
-        }
+        createBtn.disabled = true;
+        createBtn.textContent = "Creating...";
+        showStartDebug("Creating room...");
 
-        if(action === "removeBot" || occupant?.isBot){
-          socket.emit("seatAction", { roomCode, seatKey, action:"removeBot" });
-          return;
-        }
+        socket.emit("createRoom", { name:safeName() });
 
-        if(!occupant || occupant.id === localStorage.getItem("beanersPlayerId")){
-          socket.emit("seatAction", { roomCode, seatKey, action:"sit" });
-          return;
-        }
+        setTimeout(() => {
+          if(!$("game") || $("game").classList.contains("hidden")){
+            createBtn.disabled = false;
+            createBtn.textContent = "Create Room";
+            showStartDebug("No room response yet — check Render log");
+          }
+        }, 3500);
       }, true);
-    });
+    }
 
-    showStartDebug(socket.connected ? "Connected v43" : "Connecting v43...");
+    if(joinBtn && !joinBtn.dataset.v44Bound){
+      joinBtn.dataset.v44Bound = "1";
+      joinBtn.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const roomCode = cleanRoom();
+        if(!roomCode) return alert("Enter the 4-digit room code.");
+
+        joinBtn.disabled = true;
+        joinBtn.textContent = "Joining...";
+        showStartDebug("Joining " + roomCode + "...");
+
+        socket.emit("joinRoom", {
+          roomCode,
+          name:safeName(),
+          playerToken:localStorage.getItem(getTokenKey())
+        });
+
+        setTimeout(() => {
+          if(!$("game") || $("game").classList.contains("hidden")){
+            joinBtn.disabled = false;
+            joinBtn.textContent = "Join Room";
+            showStartDebug("No join response yet — check code/log");
+          }
+        }, 3500);
+      }, true);
+    }
+
+    showStartDebug(socket.connected ? "Connected v44" : "Connecting v44...");
   }
 
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
