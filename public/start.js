@@ -93,7 +93,7 @@
       }, true);
     });
 
-    showStartDebug(socket.connected ? "Connected" : "Connecting...");
+    showStartDebug(socket.connected ? "Connected v43" : "Connecting v43...");
   }
 
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);

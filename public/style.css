@@ -2871,3 +2871,8 @@ body.inLobbyMode #game{
     min-height:21px;
   }
 }
+
+/* v43 small stability marker */
+.startDebug::after{
+  content:"";
+}

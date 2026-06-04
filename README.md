@@ -1,8 +1,12 @@
-# Beaners v42 Lobby Click/Readability Fix
+# Beaners v43 Missing Server Helpers Fix
 
-Fixes:
-- Seat buttons are now above the table overlay and tappable.
-- Adds explicit Sit/Add Bot/Remove Bot controls.
-- Hides the player's hand/actions area in lobby mode.
-- Left/right seat text is horizontal/readable.
-- Adds v42 to splash/debug text.
+Fixes the Render log errors:
+- ReferenceError: resolveRoomCode is not defined
+- ReferenceError: bindSocketToPlayer is not defined
+
+Also:
+- Adds safe findRoomBySocket fallback.
+- Makes requestRoomState safe after create/join.
+- Keeps roomReady/roomState fallback for entering rooms.
+- Adds v43 markers to splash/debug.
+- Syntax-checks server.js, app.js, and start.js.

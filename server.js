@@ -506,9 +506,6 @@ function addBot(room, preferredSeat=null){
 
 
 
-function normaliseRoomCode(roomCode){
-  return String(roomCode || "").replace(/\D/g, "").trim();
-}
 
 function emitToast(roomCode, message){
   io.to(roomCode).emit("toast", { message });
@@ -527,15 +524,68 @@ function isOwner(room, socket){
   const owner = ensureOwner(room);
   return !!owner && socket.data?.playerToken === owner.token;
 }
+
+/* v43 compatibility helpers - must stay above io.on */
+function resolveRoomCode(roomCode){
+  return String(roomCode || "").replace(/\D/g, "").trim();
+}
+
+function normaliseRoomCode(roomCode){
+  return resolveRoomCode(roomCode);
+}
+
+function bindSocketToPlayer(room, socket){
+  if(!room || !socket) return null;
+
+  let player = room.players.find(p => p.id === socket.id && !p.isBot);
+
+  if(!player && socket.data && socket.data.playerToken){
+    player = room.players.find(p => !p.isBot && p.token === socket.data.playerToken);
+  }
+
+  if(player){
+    const oldId = player.id;
+    player.id = socket.id;
+    player.disconnected = false;
+
+    for(const meld of room.tableMelds || []){
+      if(meld.ownerId === oldId) meld.ownerId = socket.id;
+    }
+  }
+
+  return player || null;
+}
+
+function findRoomBySocket(socket){
+  for(const [roomCode, room] of Object.entries(rooms)){
+    const found = room.players.some(p =>
+      p.id === socket.id ||
+      (!p.isBot && socket.data && socket.data.playerToken && p.token === socket.data.playerToken)
+    );
+    if(found) return { roomCode, room };
+  }
+  return { roomCode:null, room:null };
+}
+
 io.on("connection", socket => {
   socket.on("requestRoomState", ({roomCode}) => {
-    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
+    roomCode = resolveRoomCode(roomCode);
     const room = rooms[roomCode];
-    if(!room) return socket.emit("errorMessage","Room not found.");
+
+    if(!room){
+      const found = findRoomBySocket(socket);
+      roomCode = found.roomCode;
+      if(!found.room) return socket.emit("errorMessage","Room not found.");
+    }
+
+    const activeRoom = rooms[roomCode];
+    if(!activeRoom) return socket.emit("errorMessage","Room not found.");
+
+    const player = bindSocketToPlayer(activeRoom, socket);
     socket.emit("roomState", publicRoomState(roomCode));
-    const p = room.players.find(player => player.id === socket.id || (!player.isBot && socket.data?.playerToken && player.token === socket.data.playerToken));
-    if(p) socket.emit("yourHand", p.hand);
+    if(player) socket.emit("yourHand", player.hand);
   });
+
 
   socket.on("createRoom", ({name})=>{
     console.log("createRoom requested", { socketId: socket.id, name });
@@ -651,15 +701,21 @@ io.on("connection", socket => {
     emitRoom(roomCode);
   });
   socket.on("seatAction", ({ roomCode, seatKey, action }) => {
-    roomCode = String(roomCode || "").replace(/\D/g, "").trim();
-    const room = rooms[roomCode];
+    roomCode = resolveRoomCode(roomCode);
+    let room = rooms[roomCode];
+
+    if(!room){
+      const found = findRoomBySocket(socket);
+      roomCode = found.roomCode;
+      room = found.room;
+    }
+
     if(!room || room.phase !== "lobby") return socket.emit("errorMessage","Seat selection is only available before the game starts.");
 
     const allowed = ["top","left","right","bottom"];
     if(!allowed.includes(seatKey)) return socket.emit("errorMessage","Invalid seat.");
 
-    const player = room.players.find(p => p.id === socket.id && !p.isBot) ||
-      room.players.find(p => !p.isBot && socket.data?.playerToken && p.token === socket.data.playerToken);
+    const player = bindSocketToPlayer(room, socket);
 
     if(action === "addBot"){
       if(typeof isOwner === "function" && !isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can add bots.");
@@ -693,6 +749,7 @@ io.on("connection", socket => {
     player.disconnected = false;
     emitRoom(roomCode);
   });
+
 
   socket.on("chooseSeat", ({ roomCode, seatKey }) => {
     roomCode = normaliseRoomCode(roomCode);
