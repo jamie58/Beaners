@@ -1,7 +1,8 @@
-# Beaners v45 Seat Bot Buttons
+# Beaners v46 Lobby Buttons + Exit Fix
 
-Updates:
-- Adds small Add Bot and Remove Bot buttons at the bottom of each seat.
-- Seat itself remains tappable to sit/move.
-- Wheel still requires at least 2 seated players/bots before it can spin.
-- Adds v45 to splash/debug text.
+Fixes:
+- Explicitly injects Add Bot and Remove Bot buttons into every lobby seat after roomState.
+- Makes the seat itself tappable for sitting.
+- Exit now uses the current saved room and has a server fallback by socket/token.
+- Hides hand/action controls in lobby.
+- Adds v46 markers.
