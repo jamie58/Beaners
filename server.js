@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
-const GAME_VERSION = 'v56';
+const GAME_VERSION = 'v58';
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 25000 });
@@ -54,6 +54,8 @@ io.on('connection', socket=>{
   socket.on('playOnMeld',({roomCode,playerToken,meldId,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||!p.isDown) return socket.emit('errorMessage','You must lay your first meld before adding single cards.'); const c=p.hand.find(x=>x.id===cardId); const m=room.tableMelds.find(x=>x.id===meldId); if(!c||!m) return; const b=beaner(room.round); if(!canAdd(m,c,b)) return socket.emit('errorMessage','Card does not fit that meld.'); p.hand=p.hand.filter(x=>x.id!==cardId); m.cards.push(c); if(m.type==='run') m.cards=sortRun(m.cards,b); emitRoom(rc); });
   socket.on('discard',({roomCode,playerToken,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(!p.hasPickedUp&&!(p.isDown&&p.hand.length===1)) return socket.emit('errorMessage','Pick up before discarding.'); const idx=p.hand.findIndex(c=>c.id===cardId); if(idx<0) return; const [c]=p.hand.splice(idx,1); room.discard.push(c); if(p.hand.length===0) return endRound(rc,p); nextTurn(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
   socket.on('nextRound',({roomCode})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='roundOver') return; room.round+=1; const s=seated(room); room.starterToken=s[(room.round-1)%s.length]?.token||room.players[0].token; startRound(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
+  socket.on('restartGame',({roomCode})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return; room.round=1; room.phase='lobby'; room.deck=[]; room.discard=[]; room.tableMelds=[]; room.currentPlayerIndex=0; room.starterToken=null; room.roundScores=[]; room.winnerMessage=''; for(const p of room.players){ p.hand=[]; p.isDown=false; p.lastRoundScore=null; p.hasPickedUp=false; p.turnMs=0; p.turnCount=0; if(p.isBot){ /* keep bot seated */ } } emitRoom(rc); });
+
   socket.on('restartRound',({roomCode})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return; startRound(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
 
   socket.on('exitGame',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return socket.emit('exitedGame'); const p=player(room,socket,playerToken); if(!p) return socket.emit('exitedGame'); const idx=room.players.findIndex(x=>!x.isBot&&x.token===p.token); if(idx>=0){ if(room.phase==='lobby') room.players.splice(idx,1); else room.players[idx]={...p,id:`bot-${tok().slice(0,6)}`,token:`bot-${tok()}`,name:`${p.name} Bot`,isBot:true,connected:true}; } socket.leave(rc); socket.emit('exitedGame'); if(!room.players.length) delete rooms[rc]; else emitRoom(rc); });

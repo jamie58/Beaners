@@ -1,11 +1,13 @@
-# Beaners v56 Server Start + Hand Fix
+# Beaners v58 Deck / Drag / Clockwise Update
 
-Built from v53 playing field restoration.
+Built on v57.
 
-Fixes:
-- Removes bad top-level socket.on crash.
-- Adds getHand/forceHand inside Socket.IO connection.
-- Fixes missing renderHand function.
-- Requests hand after room state/start/refresh.
-- Adds restartRound fallback.
-- Version labels/cache busting updated to v56.
+Changes:
+- Deck now uses a single 52-card deck instead of two decks.
+- Deck count displays as remaining/52.
+- Deck pile has a Beaners-style card-back design.
+- Drag hand cards onto discard to discard.
+- Drag hand cards onto existing melds to play onto them.
+- Gameplay player order is clockwise from the bottom seat:
+  bottom -> left -> top -> right.
+- Version/cache busting updated to v58.

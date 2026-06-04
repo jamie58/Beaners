@@ -462,3 +462,188 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
   padding:18px 12px;
   opacity:.7;
 }
+
+
+/* v57 final small polish */
+.tableLabel{
+  display:none !important;
+}
+
+.refreshBtn,
+.restartGameBtn{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:38px !important;
+  height:38px !important;
+  min-width:38px !important;
+  border-radius:50% !important;
+  padding:0 !important;
+  font-size:22px !important;
+}
+
+.restartGameBtn{
+  background:#fffaf0 !important;
+  color:#24104f !important;
+}
+
+.hand .card,
+#hand .card{
+  width:44px !important;
+  height:64px !important;
+  border-radius:8px !important;
+}
+
+.hand .card strong,
+#hand .card strong{
+  font-size:17px !important;
+}
+
+.hand .card span,
+#hand .card span{
+  font-size:22px !important;
+}
+
+.hand{
+  gap:5px !important;
+  min-height:74px !important;
+  padding-bottom:7px !important;
+}
+
+.handPanel,
+.restoredHandPanel{
+  min-height:126px !important;
+}
+
+.beanerCard{
+  border:4px solid #f8c84a !important;
+  box-shadow:0 0 12px rgba(248,200,74,.9), 0 4px 10px rgba(0,0,0,.25) !important;
+  background:#fff8c7 !important;
+}
+
+.beanerCard::after{
+  content:"B";
+  position:absolute;
+  top:-8px;
+  right:-8px;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:#f8c84a;
+  color:#24104f;
+  font-size:11px;
+  font-weight:1000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.card{
+  position:relative;
+}
+
+.restoredMeldCards .beanerCard,
+.meldCards .beanerCard,
+.restoredDiscardPreview .beanerCard{
+  border-width:2px !important;
+}
+
+.restoredMeldCards .beanerCard::after,
+.meldCards .beanerCard::after,
+.restoredDiscardPreview .beanerCard::after{
+  width:12px;
+  height:12px;
+  font-size:7px;
+  top:-5px;
+  right:-5px;
+}
+
+@media(max-width:480px){
+  .hand .card,
+  #hand .card{
+    width:40px !important;
+    height:58px !important;
+  }
+
+  .hand .card strong,
+  #hand .card strong{
+    font-size:15px !important;
+  }
+
+  .hand .card span,
+  #hand .card span{
+    font-size:20px !important;
+  }
+}
+
+
+/* v58 deck/card/drag/clockwise polish */
+.restoredDeck{
+  position:relative !important;
+  overflow:hidden !important;
+  color:white !important;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,.14) 0 16%, transparent 17%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.14) 0 6px, transparent 6px 12px),
+    linear-gradient(145deg,#5b21b6,#2b145c) !important;
+  border:4px solid #fffaf0 !important;
+  box-shadow:0 10px 22px rgba(0,0,0,.24), inset 0 0 0 3px rgba(248,200,74,.75) !important;
+}
+
+.restoredDeck::before{
+  content:"";
+  position:absolute;
+  inset:10px;
+  border:2px solid rgba(255,250,240,.85);
+  border-radius:10px;
+  pointer-events:none;
+}
+
+.restoredDeck::after{
+  content:"B";
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  background:#f8c84a;
+  color:#24104f;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:1000;
+  font-size:24px;
+  box-shadow:0 0 0 3px rgba(255,250,240,.9);
+}
+
+.restoredDeck span{
+  position:absolute;
+  top:7px;
+  font-size:11px !important;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+  z-index:2;
+}
+
+.restoredDeck strong{
+  position:absolute;
+  bottom:7px;
+  font-size:14px !important;
+  z-index:2;
+  color:#fffaf0;
+}
+
+.card[draggable="true"]{
+  cursor:grab;
+}
+
+.card[draggable="true"]:active{
+  cursor:grabbing;
+}
+
+.dragOver{
+  outline:5px solid #22c55e !important;
+  box-shadow:0 0 22px rgba(34,197,94,.75) !important;
+}

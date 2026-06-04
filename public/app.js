@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v56";
+  const VERSION = window.BEANERS_VERSION || "v58";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -46,7 +46,7 @@
 
   function createCard(c, small=false) {
     const el = document.createElement("button");
-    el.className = `card ${suitClass(c)} ${small ? "smallCard" : ""}`;
+    el.className = `card ${suitClass(c)} ${small ? "smallCard" : ""} ${state && c.rank === state.beaner ? "beanerCard" : ""}`;
     el.dataset.id = c.id;
     el.innerHTML = `<strong>${c.rank}</strong><span>${c.suit}</span>`;
     return el;
@@ -93,9 +93,6 @@
         name.textContent = occupant.name;
         action.innerHTML = "";
       }
-
-      const label = $(`label${key[0].toUpperCase()}${key.slice(1)}`);
-      if (label) label.textContent = occupant ? occupant.name.replace(" Bot","") : labels[key];
     });
 
     drawWheel();
@@ -278,7 +275,7 @@
     $("scoreOverlay").classList.add("hidden");
     $("beanerBadge").textContent = state.beaner || "A";
 
-    $("deckCount").textContent = state.deckCount;
+    $("deckCount").textContent = `${state.deckCount}/52`;
 
     const top = state.discard[0];
     const topDiscard = $("topDiscard");
@@ -327,6 +324,8 @@
 
     hand.forEach(c => {
       const card = createCard(c);
+      card.draggable = true;
+      card.addEventListener('dragstart', ev => { ev.dataTransfer.setData('text/plain', c.id); });
       if (selected.has(c.id)) card.classList.add('selected');
       card.addEventListener('click', () => {
         selected.has(c.id) ? selected.delete(c.id) : selected.add(c.id);
@@ -334,6 +333,7 @@
       });
       el.appendChild(card);
     });
+    enableDragDropTargets();
   }
 
   function renderScore() {
@@ -422,10 +422,14 @@
 
   $("spinBtn").addEventListener("click", () => socket.emit("spinStarter", { roomCode }));
   $("startBtn").addEventListener("click", () => socket.emit("startGame", { roomCode }));
-  $("refreshBtn").addEventListener("click", () => {
+  if ($("refreshBtn")) $("refreshBtn").addEventListener("click", () => {
     socket.emit("requestRoomState", { roomCode, playerToken });
     requestMyHand();
   });
+  if ($("restartGameBtn")) $("restartGameBtn").addEventListener("click", () => {
+    if (confirm("Restart the whole game and return to lobby?")) socket.emit("restartGame", { roomCode, playerToken });
+  });
+
   $("exitBtn").addEventListener("click", () => {
     if (confirm("Exit game?")) socket.emit("exitGame", { roomCode, playerToken });
   });
@@ -465,6 +469,44 @@
     if (state && state.phase === 'roundOver') socket.emit("nextRound", { roomCode });
     else socket.emit("restartRound", { roomCode });
   });
+
+
+  function enableDragDropTargets() {
+    const discardTarget = $("topDiscard");
+    if (discardTarget && !discardTarget.dataset.dragBound) {
+      discardTarget.dataset.dragBound = "1";
+      discardTarget.addEventListener("dragover", e => {
+        e.preventDefault();
+        discardTarget.classList.add("dragOver");
+      });
+      discardTarget.addEventListener("dragleave", () => discardTarget.classList.remove("dragOver"));
+      discardTarget.addEventListener("drop", e => {
+        e.preventDefault();
+        discardTarget.classList.remove("dragOver");
+        const cardId = e.dataTransfer.getData("text/plain");
+        if (cardId) socket.emit("discard", { roomCode, playerToken, cardId });
+      });
+    }
+
+    document.querySelectorAll(".restoredMeld").forEach(meld => {
+      if (meld.dataset.dragBound) return;
+      meld.dataset.dragBound = "1";
+      meld.addEventListener("dragover", e => {
+        e.preventDefault();
+        meld.classList.add("dragOver");
+      });
+      meld.addEventListener("dragleave", () => meld.classList.remove("dragOver"));
+      meld.addEventListener("drop", e => {
+        e.preventDefault();
+        meld.classList.remove("dragOver");
+        const cardId = e.dataTransfer.getData("text/plain");
+        if (cardId) {
+          socket.emit("playOnMeld", { roomCode, playerToken, meldId: meld.dataset.id, cardId });
+          selected.clear();
+        }
+      });
+    });
+  }
 
   setInterval(updateTurnHighlightsLoop, 1000);
   setInterval(() => {

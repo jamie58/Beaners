@@ -5,13 +5,13 @@
   <title>Beaners</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/style.css?v=v56">
+  <link rel="stylesheet" href="/style.css?v=v58">
 </head>
 <body>
   <div id="splash" class="splash">
     <div class="splashLogo">BEANERS</div>
     <div class="splashSub">Loading the table...</div>
-    <div id="splashVersion" class="splashVersion">v56</div>
+    <div id="splashVersion" class="splashVersion">v58</div>
   </div>
 
   <main>
@@ -26,7 +26,7 @@
         <button id="createBtn">Create Room</button>
         <button id="joinBtn">Join Room</button>
       </div>
-      <div id="startVersion" class="startDebug">v56</div>
+      <div id="startVersion" class="startDebug">v58</div>
     </section>
 
     <section id="game" class="hidden">
@@ -34,6 +34,7 @@
         <button id="exitBtn" class="iconBtn">×</button>
         <div class="roomBadge">Room <span id="roomCode">----</span></div>
         <button id="refreshBtn" class="refreshBtn">↻</button>
+        <button id="restartGameBtn" class="restartGameBtn" title="Restart game">⟲</button>
         <div id="beanerBadge" class="beanerBadge">A</div>
       </header>
 
@@ -48,10 +49,10 @@
             <button class="seat seatTop" data-seat="top"><span class="seatName">Sit Here</span><span class="seatAction"></span></button>
             <button class="seat seatLeft" data-seat="left"><span class="seatName">Sit Here</span><span class="seatAction"></span></button>
             <div class="tableCircle">
-              <span id="labelTop" class="tableLabel top">Top</span>
-              <span id="labelLeft" class="tableLabel left">Left</span>
-              <span id="labelRight" class="tableLabel right">Right</span>
-              <span id="labelBottom" class="tableLabel bottom">Bottom</span>
+              
+              
+              
+              
             </div>
             <button class="seat seatRight" data-seat="right"><span class="seatName">Sit Here</span><span class="seatAction"></span></button>
             <button class="seat seatBottom" data-seat="bottom"><span class="seatName">Sit Here</span><span class="seatAction"></span></button>
@@ -138,8 +139,8 @@
     </section>
   </main>
 
-  <script src="/version.js?v=v56"></script>
+  <script src="/version.js?v=v58"></script>
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js?v=v56"></script>
+  <script src="/app.js?v=v58"></script>
 </body>
 </html>
