@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v64";
+  const VERSION = window.BEANERS_VERSION || "v65";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -311,7 +311,7 @@ function drawWheel(rotation=0) {
 
     // Rotate so the selected winner lands under the fixed pointer at 12 o'clock.
     const target = idx >= 0 ? (Math.PI * 1.5 - (idx * slice + slice/2)) : 0;
-    const spins = Math.PI * 2 * 5;
+    const spins = Math.PI * 2 * (4 + Math.floor(Math.random() * 4));
     const start = performance.now();
 
     function frame(now) {
@@ -353,9 +353,12 @@ function drawWheel(rotation=0) {
     return state.players.find(p => p.seat === actualSeat) || null;
   }
 
-  function meldsForPlayerToken(token) {
-    if (!state || !token) return [];
-    return state.tableMelds.filter(m => m.ownerToken === token);
+  function meldsForPlayerToken(token, playerName="") {
+    if (!state) return [];
+    return state.tableMelds.filter(m =>
+      (token && m.ownerToken === token) ||
+      (playerName && m.ownerName === playerName)
+    );
   }
 
   
@@ -427,7 +430,7 @@ function renderMeldCard(c) {
     nameEl.textContent = p.token === playerToken ? `${p.name} (you)` : p.name;
     metaEl.textContent = `${p.cardCount} cards • ${p.isDown ? "Down" : "Not down"} • ${p.totalScore} pts`;
 
-    const melds = meldsForPlayerToken(p.token);
+    const melds = meldsForPlayerToken(p.token, p.name);
     if (!melds.length) {
       meldEl.innerHTML = `<div class="noMelds">No melds yet</div>`;
       return;
@@ -610,10 +613,8 @@ function renderMeldCard(c) {
   });
 
   $("spinBtn").addEventListener("click", () => {
-    const players = seatedPlayers();
-    if (players.length < 2) return alert("Need at least 2 seated players or bots.");
-    const winner = players[Math.floor(Math.random() * players.length)];
-    socket.emit("spinStarter", { roomCode, starterToken: winner.token });
+    $("wheelResult").textContent = "Spinning...";
+    socket.emit("spinStarter", { roomCode });
   });
   $("startBtn").addEventListener("click", () => socket.emit("startGame", { roomCode }));
   if ($("refreshBtn")) $("refreshBtn").addEventListener("click", () => {
