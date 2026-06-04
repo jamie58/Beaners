@@ -2,14 +2,14 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
-const GAME_VERSION = 'v59';
+const GAME_VERSION = 'v61';
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 25000 });
 app.use(express.static('public'));
 const PORT = process.env.PORT || 3000;
 const rooms = {};
-const seats = ['top','left','bottom','right'];
+const seats = ['bottom','left','top','right'];
 const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 const suits = ['♠','♥','♦','♣'];
 function code(){ let c; do{ c=String(Math.floor(1000+Math.random()*9000)); }while(rooms[c]); return c; }
@@ -17,10 +17,12 @@ function tok(){ return crypto.randomBytes(16).toString('hex'); }
 function cleanName(n){ return String(n||'Player').trim().slice(0,20)||'Player'; }
 function cleanCode(c){ return String(c||'').replace(/\D/g,'').slice(0,4); }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-function deck(){ const d=[]; for(let pack=0;pack<2;pack++) for(const suit of suits) for(const rank of ranks) d.push({id:crypto.randomBytes(6).toString('hex'),rank,suit}); return shuffle(d); }
+function deck(){ const d=[]; for(const suit of suits) for(const rank of ranks) d.push({id:crypto.randomBytes(6).toString('hex'),rank,suit}); return shuffle(d); }
 function beaner(round){ return ranks[round-1] || 'A'; }
 function scoreCard(c,b,dbl=false){ let v=c.rank==='A'?15:['J','Q','K'].includes(c.rank)?10:Number(c.rank); if(c.rank===b) v=dbl?100:50; else if(dbl) v*=2; return v; }
 function rankVal(r){ return ranks.indexOf(r); }
+function rankValue(r){ return rankVal(r); }
+
 function findByToken(token){ if(!token) return null; for(const [roomCode,room] of Object.entries(rooms)){ const p=room.players.find(x=>!x.isBot&&x.token===token); if(p) return {roomCode,room,player:p}; } return null; }
 function player(room,socket,token){ if(!room) return null; let p=room.players.find(x=>!x.isBot&&x.id===socket.id); if(!p&&token) p=room.players.find(x=>!x.isBot&&x.token===token); if(p){ p.id=socket.id; p.connected=true; p.lastSeen=Date.now(); socket.data.playerToken=p.token; } return p||null; }
 function seated(room){ return seats.map(s=>room.players.find(p=>p.seat===s)).filter(Boolean); }
@@ -113,7 +115,9 @@ io.on('connection', socket=>{
   socket.on('takeTopDiscard',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(p.hasPickedUp) return socket.emit('errorMessage','You have already picked up.'); const c=room.discard.pop(); if(c) p.hand.push(c); p.hasPickedUp=true; emitRoom(rc); });
   socket.on('takeDiscardPile',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(p.hasPickedUp) return socket.emit('errorMessage','You have already picked up.'); p.hand.push(...room.discard); room.discard=[]; p.hasPickedUp=true; emitRoom(rc); });
   socket.on('layMeld',({roomCode,playerToken,cardIds})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p) return; const b=beaner(room.round); const cards=cardIds.map(id=>p.hand.find(c=>c.id===id)).filter(Boolean); const type=meldType(cards,b); if(!type) return socket.emit('errorMessage','That is not a valid meld.'); p.hand=p.hand.filter(c=>!cardIds.includes(c.id)); p.isDown=true; room.tableMelds.push({id:crypto.randomBytes(5).toString('hex'),ownerToken:p.token,ownerName:p.name,type,cards:type==='run'?sortRun(cards,b):cards}); emitRoom(rc); });
-  socket.on('playOnMeld',({roomCode,playerToken,meldId,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||!p.isDown) return socket.emit('errorMessage','You must lay your first meld before adding single cards.'); const c=p.hand.find(x=>x.id===cardId); const m=room.tableMelds.find(x=>x.id===meldId); if(!c||!m) return; const b=beaner(room.round); if(!canAdd(m,c,b)) return socket.emit('errorMessage','Card does not fit that meld.'); p.hand=p.hand.filter(x=>x.id!==cardId); m.cards.push(c); if(m.type==='run') m.cards=sortRun(m.cards,b); emitRoom(rc); });
+  socket.on('addToMeld',({roomCode,playerToken,meldId,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||!p.isDown) return socket.emit('errorMessage','Lay your first meld before adding to any meld.'); const c=p.hand.find(x=>x.id===cardId); const m=room.tableMelds.find(x=>x.id===meldId); if(!c||!m) return; const b=beaner(room.round); if(!canAdd(m,c,b)) return socket.emit('errorMessage','Card does not fit that meld.'); p.hand=p.hand.filter(x=>x.id!==cardId); m.cards.push(c); if(m.type==='run') m.cards=sortRun(m.cards,b); emitRoom(rc); });
+
+  socket.on('playOnMeld',({roomCode,playerToken,meldId,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||!p.isDown) return socket.emit('errorMessage','Lay your first meld before adding to any meld.'); const c=p.hand.find(x=>x.id===cardId); const m=room.tableMelds.find(x=>x.id===meldId); if(!c||!m) return; const b=beaner(room.round); if(!canAdd(m,c,b)) return socket.emit('errorMessage','Card does not fit that meld.'); p.hand=p.hand.filter(x=>x.id!==cardId); m.cards.push(c); if(m.type==='run') m.cards=sortRun(m.cards,b); emitRoom(rc); });
   socket.on('discard',({roomCode,playerToken,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(!p.hasPickedUp&&!(p.isDown&&p.hand.length===1)) return socket.emit('errorMessage','Pick up before discarding.'); const idx=p.hand.findIndex(c=>c.id===cardId); if(idx<0) return; const [c]=p.hand.splice(idx,1); room.discard.push(c); if(p.hand.length===0) return endRound(rc,p); nextTurn(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
   socket.on('nextRound',({roomCode})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='roundOver') return; room.round+=1; const s=seated(room); room.starterToken=s[(room.round-1)%s.length]?.token||room.players[0].token; startRound(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
   socket.on('restartGame',({roomCode})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return; room.round=1; room.phase='lobby'; room.deck=[]; room.discard=[]; room.tableMelds=[]; room.currentPlayerIndex=0; room.starterToken=null; room.roundScores=[]; room.winnerMessage=''; for(const p of room.players){ p.hand=[]; p.isDown=false; p.lastRoundScore=null; p.hasPickedUp=false; p.turnMs=0; p.turnCount=0; if(p.isBot){ /* keep bot seated */ } } emitRoom(rc); });

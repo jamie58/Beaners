@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v59";
+  const VERSION = window.BEANERS_VERSION || "v61";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -99,7 +99,7 @@
   }
 
   function seatedPlayers() {
-    const order = ["top","left","bottom","right"];
+    const order = ["bottom","left","top","right"];
     return order.map(seat => state.players.find(p => p.seat === seat)).filter(Boolean);
   }
 
@@ -303,7 +303,7 @@ function renderMeldCard(c) {
     $("scoreOverlay").classList.add("hidden");
     $("beanerBadge").textContent = state.beaner || "A";
 
-    $("deckCount").textContent = state.deckCount;
+    $("deckCount").textContent = "";
 
     const top = state.discard[0];
     const topDiscard = $("topDiscard");
@@ -320,6 +320,7 @@ function renderMeldCard(c) {
     state.discard.slice(1, 9).forEach(c => preview.appendChild(createCard(c, true)));
 
     ["top","left","right","bottom"].forEach(renderZone);
+    enableDragDropTargets();
 
     renderHand();
   }
@@ -357,6 +358,7 @@ function renderMeldCard(c) {
       if (selected.has(c.id)) card.classList.add('selected');
       card.addEventListener('click', () => {
         selected.has(c.id) ? selected.delete(c.id) : selected.add(c.id);
+        refreshMeldDropHints();
         renderHand();
       });
       el.appendChild(card);
@@ -505,17 +507,49 @@ function renderMeldCard(c) {
     return ids.length === 1 ? ids[0] : null;
   }
 
+
+  function oneSelectedCardId() {
+    const ids = [...selected];
+    return ids.length === 1 ? ids[0] : null;
+  }
+
+  function clearSelectedCards() {
+    selected.clear();
+    refreshMeldDropHints();
+    renderHand();
+  }
+
+  function refreshMeldDropHints() {
+    const ready = !!oneSelectedCardId();
+    document.querySelectorAll(".restoredMeld").forEach(m => m.classList.toggle("tapDropReady", ready));
+  }
+
+  function addCardToMeld(cardId, meldId) {
+    if (!cardId || !meldId) return false;
+    socket.emit("addToMeld", { roomCode, playerToken, meldId, cardId });
+    socket.emit("playOnMeld", { roomCode, playerToken, meldId, cardId }); // harmless fallback if server ignores duplicate after first succeeds
+    selected.clear();
+    refreshMeldDropHints();
+    renderHand();
+    return true;
+  }
+
 function enableDragDropTargets() {
     const discardTarget = $("topDiscard");
-    if (discardTarget && !discardTarget.dataset.dragBound) {
-      discardTarget.dataset.dragBound = "1";
+
+    if (discardTarget && !discardTarget.dataset.v61DropBound) {
+      discardTarget.dataset.v61DropBound = "1";
+
       discardTarget.addEventListener("dragover", e => {
         e.preventDefault();
         discardTarget.classList.add("dragOver");
       });
+
       discardTarget.addEventListener("dragleave", () => discardTarget.classList.remove("dragOver"));
+
       discardTarget.addEventListener("drop", e => {
         e.preventDefault();
+        e.stopPropagation();
         discardTarget.classList.remove("dragOver");
         const cardId = e.dataTransfer.getData("text/plain");
         if (cardId) socket.emit("discard", { roomCode, playerToken, cardId });
@@ -523,34 +557,44 @@ function enableDragDropTargets() {
     }
 
     document.querySelectorAll(".restoredMeld").forEach(meld => {
-      if (!meld.dataset.dragBound) {
-        meld.dataset.dragBound = "1";
+      if (!meld.dataset.v61DropBound) {
+        meld.dataset.v61DropBound = "1";
+
         meld.addEventListener("dragover", e => {
           e.preventDefault();
           meld.classList.add("dragOver");
         });
+
         meld.addEventListener("dragleave", () => meld.classList.remove("dragOver"));
+
         meld.addEventListener("drop", e => {
           e.preventDefault();
+          e.stopPropagation();
           meld.classList.remove("dragOver");
           const cardId = e.dataTransfer.getData("text/plain");
-          if (cardId) {
-            socket.emit("playOnMeld", { roomCode, playerToken, meldId: meld.dataset.id, cardId });
-            selected.clear();
-          }
+          addCardToMeld(cardId, meld.dataset.id);
         });
-      }
 
-      if (!meld.dataset.tapBound) {
-        meld.dataset.tapBound = "1";
-        meld.addEventListener("click", () => {
-          const cardId = selectedCardIdForMeldDrop();
+        // Mobile/iPhone fallback: select one card, then tap any meld.
+        meld.addEventListener("click", e => {
+          const cardId = oneSelectedCardId();
           if (!cardId) return;
-          socket.emit("playOnMeld", { roomCode, playerToken, meldId: meld.dataset.id, cardId });
-          selected.clear();
-        });
+          e.preventDefault();
+          e.stopPropagation();
+          addCardToMeld(cardId, meld.dataset.id);
+        }, true);
+
+        meld.addEventListener("pointerup", e => {
+          const cardId = oneSelectedCardId();
+          if (!cardId) return;
+          e.preventDefault();
+          e.stopPropagation();
+          addCardToMeld(cardId, meld.dataset.id);
+        }, true);
       }
     });
+
+    refreshMeldDropHints();
   }
 
 

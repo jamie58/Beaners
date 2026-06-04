@@ -1,12 +1,15 @@
-# Beaners v59 Run / Drag / Meld Fix
+# Beaners v61
 
-Built on v58.
+Built from the full uploaded GitHub project, not the reduced 8-file package.
+
+Included files: 25
 
 Fixes:
-- Deck display now shows only cards remaining, no /52.
-- Replaces deck generator with a true single 52-card deck.
-- Beaners in runs now display in the correct gap position, e.g. 2, Beaner, 4.
-- Server run sorting also places Beaners into natural gap order.
-- Drag hand cards onto any meld on the table, including other players' melds.
-- Tap fallback: select one card, then tap any meld to play onto it.
-- Version/cache busting updated to v59.
+- Full project structure retained, including audio and icons.
+- True single 52-card deck.
+- Deck number hidden completely.
+- Clockwise play order adjusted to bottom -> left -> top -> right.
+- Robust desktop drag/drop onto melds and discard.
+- Mobile fallback: select 1 card, then tap any meld.
+- Beaner run sorting remains in place.
+- Version/cache busting updated to v61.
