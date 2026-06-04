@@ -425,7 +425,7 @@ socket.on("errorMessage", message => {
   if(message === "Room not found."){
     alert("Room not found. The server may have restarted, or the room code is no longer active.");
   } else {
-    alert(message);
+    if(String(message).includes("That seat is already taken") || String(message).includes("Only the room owner") || String(message).includes("No bot in that seat")) { console.warn(message); } else if(String(message).includes("Only the room owner") || String(message).includes("That seat is already taken") || String(message).includes("No bot in that seat")) { console.warn(message); } else alert(message);
   }
 });
 

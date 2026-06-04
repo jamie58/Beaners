@@ -1,10 +1,11 @@
-# Beaners v47 Lobby Seat Action Fix
+# Beaners v49 Stability / Reconnect / Lobby Fix
 
 Fixes:
-- Remove Bot button only appears when a bot is actually in that seat.
-- Empty seats show Add Bot only.
-- Seat itself remains tappable to sit.
-- Cleans up Sit Here / side-seat formatting.
-- Replaces duplicate/broken seatAction handlers with one clean server handler.
-- Recovers lobby phase if no cards were dealt.
-- Adds v47 markers.
+- Exit no longer requires finding a seat; it resolves by token/socket and exits cleanly.
+- Bot add/remove no longer requires room owner.
+- Seat actions send playerToken so server can identify the player reliably.
+- requestRoomState uses token/socket fallback.
+- Refresh button requests the latest room state.
+- Reconnect requests the latest room state.
+- Suppresses stale owner/seat alert popups from old handlers.
+- Adds v49 markers.

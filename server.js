@@ -568,24 +568,24 @@ function findRoomBySocket(socket){
 }
 
 io.on("connection", socket => {
-  socket.on("requestRoomState", ({roomCode}) => {
-    roomCode = resolveRoomCode(roomCode);
-    const room = rooms[roomCode];
+
+  socket.on("requestRoomState", ({roomCode, playerToken}) => {
+    roomCode = resolveAnyRoomCode(roomCode);
+    let room = rooms[roomCode];
+    const token = getEventToken(socket, { playerToken });
 
     if(!room){
-      const found = findRoomBySocket(socket);
+      const found = findRoomBySocketOrToken(socket, token);
       roomCode = found.roomCode;
-      if(!found.room) return socket.emit("errorMessage","Room not found.");
+      room = found.room;
     }
 
-    const activeRoom = rooms[roomCode];
-    if(!activeRoom) return socket.emit("errorMessage","Room not found.");
+    if(!room || !roomCode) return socket.emit("errorMessage","Room not found.");
 
-    const player = bindSocketToPlayer(activeRoom, socket);
+    const player = findPlayerBySocketOrToken(room, socket, token);
     socket.emit("roomState", publicRoomState(roomCode));
     if(player) socket.emit("yourHand", player.hand);
   });
-
 
   socket.on("createRoom", ({name})=>{
     console.log("createRoom requested", { socketId: socket.id, name });
@@ -687,7 +687,7 @@ io.on("connection", socket => {
     if(!room || room.phase!=="lobby") return;
     if(!isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can add bots.");
     if(room.players.length>=4) return socket.emit("errorMessage","Room is already full.");
-    if(!addBot(room, seatKey)) return socket.emit("errorMessage","No empty seats available.");
+    if(!addBot(room, seatKey)) { emitRoom(roomCode); return; }
     emitRoom(roomCode);
   });
   socket.on("fillBots", ({roomCode})=>{
@@ -701,14 +701,21 @@ io.on("connection", socket => {
     emitRoom(roomCode);
   });
 
-  socket.on("seatAction", ({ roomCode, seatKey, action }) => {
-    roomCode = resolveRoomCode(roomCode);
-    const room = rooms[roomCode];
+
+  socket.on("seatAction", ({ roomCode, seatKey, action, playerToken }) => {
+    roomCode = resolveAnyRoomCode(roomCode);
+    let room = rooms[roomCode];
+
+    const token = getEventToken(socket, { playerToken });
+
+    if(!room){
+      const found = findRoomBySocketOrToken(socket, token);
+      roomCode = found.roomCode;
+      room = found.room;
+    }
 
     if(!room) return socket.emit("errorMessage","Room not found.");
 
-    // If the room was accidentally marked as playing before cards were dealt,
-    // recover it back to lobby so seating still works.
     const noCardsDealt = room.players.every(p => !p.hand || p.hand.length === 0) && (!room.deck || room.deck.length === 0);
     if(room.phase !== "lobby" && noCardsDealt) room.phase = "lobby";
 
@@ -717,27 +724,28 @@ io.on("connection", socket => {
     const allowed = ["top","left","right","bottom"];
     if(!allowed.includes(seatKey)) return socket.emit("errorMessage","Invalid seat.");
 
-    const player = bindSocketToPlayer(room, socket);
+    const player = findPlayerBySocketOrToken(room, socket, token);
 
     if(action === "addBot"){
-      if(typeof isOwner === "function" && !isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can add bots.");
-      if(room.players.some(p => p.seatKey === seatKey)) return socket.emit("errorMessage","That seat is already taken.");
-      if(room.players.length >= 4) return socket.emit("errorMessage","Room is already full.");
-      if(!addBot(room, seatKey)) return socket.emit("errorMessage","No empty seats available.");
+      if(room.players.some(p => p.seatKey === seatKey)) { emitRoom(roomCode); return; }
+      if(room.players.length >= 4) { emitRoom(roomCode); return; }
+      if(!addBot(room, seatKey)) { emitRoom(roomCode); return; }
       emitRoom(roomCode);
       return;
     }
 
     if(action === "removeBot"){
-      if(typeof isOwner === "function" && !isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can remove bots.");
       const idx = room.players.findIndex(p => p.isBot && p.seatKey === seatKey);
-      if(idx < 0) return socket.emit("errorMessage","No bot in that seat.");
-      room.players.splice(idx, 1);
-      emitRoom(roomCode);
+      if(idx >= 0){
+        room.players.splice(idx, 1);
+        emitRoom(roomCode);
+      } else {
+        emitRoom(roomCode);
+      }
       return;
     }
 
-    if(!player) return socket.emit("errorMessage","Could not find you in this room. Tap refresh/reconnect and try again.");
+    if(!player) return socket.emit("errorMessage","Could not identify your player. Rejoin the room and try again.");
 
     const taken = room.players.find(p => p.seatKey === seatKey && p.token !== player.token);
     if(taken && taken.isBot){
@@ -790,6 +798,68 @@ io.on("connection", socket => {
       emitRoom(roomCode);
       emitToast(roomCode, `${old.name} removed`);
     }
+  });
+
+  socket.on("lobbySpinStarter", ({roomCode}) => {
+    roomCode = typeof resolveRoomCode === "function" ? resolveRoomCode(roomCode) : String(roomCode || "").replace(/\D/g, "").trim();
+    const room = rooms[roomCode];
+
+    if(!room) return socket.emit("errorMessage","Room not found.");
+
+    const seated = ["top","left","bottom","right"]
+      .map(seat => room.players.find(p => p.seatKey === seat))
+      .filter(Boolean);
+
+    if(seated.length < 2) return socket.emit("errorMessage","Need at least 2 seated players or bots to spin.");
+
+    const winner = seated[Math.floor(Math.random() * seated.length)];
+    room.starterPlayerToken = winner.token;
+    room.starterPlayerId = winner.id;
+    room.starterIndex = room.players.findIndex(p => p.token === winner.token);
+    room.currentPlayerIndex = room.starterIndex;
+
+    emitRoom(roomCode);
+    io.to(roomCode).emit("starterChosen", { token:winner.token, id:winner.id, name:winner.name });
+    if(typeof emitToast === "function") emitToast(roomCode, `${winner.name} starts!`);
+  });
+
+  socket.on("lobbyStartGame", ({roomCode}) => {
+    roomCode = typeof resolveRoomCode === "function" ? resolveRoomCode(roomCode) : String(roomCode || "").replace(/\D/g, "").trim();
+    const room = rooms[roomCode];
+
+    if(!room) return socket.emit("errorMessage","Room not found.");
+
+    const seated = ["top","left","bottom","right"]
+      .map(seat => room.players.find(p => p.seatKey === seat))
+      .filter(Boolean);
+
+    if(seated.length < 2) return socket.emit("errorMessage","Need at least 2 seated players or bots to start.");
+
+    const unseatedHumans = room.players.filter(p => !p.isBot && !p.seatKey);
+    if(unseatedHumans.length) return socket.emit("errorMessage","All joined players must sit down or leave before starting.");
+
+    const seatOrder = ["bottom","left","top","right"];
+    room.players.sort((a,b) => seatOrder.indexOf(a.seatKey) - seatOrder.indexOf(b.seatKey));
+
+    let starterIndex = room.starterPlayerToken ? room.players.findIndex(p => p.token === room.starterPlayerToken) : -1;
+    if(starterIndex < 0){
+      const starter = seated[Math.floor(Math.random() * seated.length)];
+      room.starterPlayerToken = starter.token;
+      starterIndex = room.players.findIndex(p => p.token === starter.token);
+    }
+
+    room.round = room.round || 1;
+    room.phase = "playing";
+    resetRound(room);
+
+    starterIndex = room.players.findIndex(p => p.token === room.starterPlayerToken);
+    if(starterIndex < 0) starterIndex = 0;
+    room.starterIndex = starterIndex;
+    room.currentPlayerIndex = starterIndex;
+    room.starterPlayerId = room.players[starterIndex]?.id || null;
+
+    emitRoom(roomCode);
+    maybeRunBotTurn(roomCode);
   });
 
   socket.on("spinStarter", ({roomCode})=>{
@@ -1029,26 +1099,35 @@ io.on("connection", socket => {
   });
 
 
-  socket.on("exitGame", ({ roomCode }) => {
-    roomCode = typeof resolveRoomCode === "function" ? resolveRoomCode(roomCode) : String(roomCode || "").replace(/\D/g, "").trim();
+
+  socket.on("exitGame", ({ roomCode, playerToken }) => {
+    roomCode = resolveAnyRoomCode(roomCode);
     let room = rooms[roomCode];
+    const token = getEventToken(socket, { playerToken });
 
     if(!room){
-      const found = findRoomBySocket(socket);
+      const found = findRoomBySocketOrToken(socket, token);
       roomCode = found.roomCode;
       room = found.room;
     }
 
-    if(!room || !roomCode) return socket.emit("errorMessage","Could not find your active room to exit.");
+    if(!room || !roomCode) {
+      socket.emit("exitedGame");
+      return;
+    }
 
-    const player = typeof bindSocketToPlayer === "function" ? bindSocketToPlayer(room, socket) :
-      (room.players.find(p => p.id === socket.id && !p.isBot) ||
-       room.players.find(p => !p.isBot && socket.data?.playerToken && p.token === socket.data.playerToken));
+    const player = findPlayerBySocketOrToken(room, socket, token);
 
-    if(!player) return socket.emit("errorMessage","Could not find your seat/player to exit.");
+    if(!player){
+      socket.emit("exitedGame");
+      return;
+    }
 
     const idx = room.players.findIndex(p => p.id === player.id || (!p.isBot && p.token === player.token));
-    if(idx < 0) return socket.emit("errorMessage","Could not find your seat/player to exit.");
+    if(idx < 0){
+      socket.emit("exitedGame");
+      return;
+    }
 
     const old = room.players[idx];
 
@@ -1073,14 +1152,14 @@ io.on("connection", socket => {
     socket.leave(roomCode);
     socket.emit("exitedGame");
 
-    if(room.players.length === 0) delete rooms[roomCode];
-    else {
+    if(room.players.length === 0) {
+      delete rooms[roomCode];
+    } else {
       emitRoom(roomCode);
       if(typeof emitToast === "function") emitToast(roomCode, `${old.name} left`);
       maybeRunBotTurn(roomCode);
     }
   });
-
 
   socket.on("disconnect", () => {
     for(const [roomCode,room] of Object.entries(rooms)){

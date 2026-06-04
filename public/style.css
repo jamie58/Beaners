@@ -3086,3 +3086,20 @@ body.inLobbyMode .actionsPanel{
     min-height:20px !important;
   }
 }
+
+/* v48 lobby start button active state */
+#spinBtn, #startBtn{
+  touch-action:manipulation;
+}
+#wheelResult{
+  min-height:36px;
+}
+
+/* v49 stability polish */
+body.inLobbyMode #playingControls,
+body.inLobbyMode .handPanel,
+body.inLobbyMode #handPanel,
+body.inLobbyMode .playerHand,
+body.inLobbyMode .actionsPanel{
+  display:none !important;
+}

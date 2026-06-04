@@ -101,7 +101,7 @@
       createBtn.dataset.v44Bound = "1";
       createBtn.addEventListener("click", event => {
         event.preventDefault();
-        event.stopPropagation();
+        event.stopImmediatePropagation();
 
         createBtn.disabled = true;
         createBtn.textContent = "Creating...";
@@ -123,7 +123,7 @@
       joinBtn.dataset.v44Bound = "1";
       joinBtn.addEventListener("click", event => {
         event.preventDefault();
-        event.stopPropagation();
+        event.stopImmediatePropagation();
 
         const roomCode = cleanRoom();
         if(!roomCode) return alert("Enter the 4-digit room code.");
@@ -173,14 +173,14 @@ document.addEventListener("click", event => {
 
   if(mini){
     event.preventDefault();
-    event.stopPropagation();
+    event.stopImmediatePropagation();
     window.socket.emit("seatAction", { roomCode, seatKey, action: mini.dataset.action });
     return;
   }
 
   if(!occupant || occupant.isBot || occupant.id === localStorage.getItem("beanersPlayerId")){
     event.preventDefault();
-    event.stopPropagation();
+    event.stopImmediatePropagation();
     window.socket.emit("seatAction", { roomCode, seatKey, action:"sit" });
   }
 }, true);
@@ -244,7 +244,7 @@ document.addEventListener("click", event => {
       const occupant = v46State.players.find(p => p.seatKey === seatKey);
 
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
 
       if(mini){
         socket.emit("seatAction", { roomCode, seatKey, action: mini.dataset.action });
@@ -261,7 +261,7 @@ document.addEventListener("click", event => {
       exitBtn.dataset.v46Bound = "1";
       exitBtn.addEventListener("click", event => {
         event.preventDefault();
-        event.stopPropagation();
+        event.stopImmediatePropagation();
 
         const roomCode = getRoomCode();
         if(!roomCode){
@@ -372,7 +372,7 @@ document.addEventListener("click", event => {
       const roomCode = getRoomCode();
 
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
 
       if(mini){
         socket.emit("seatAction", { roomCode, seatKey, action: mini.dataset.action });
@@ -392,4 +392,207 @@ document.addEventListener("click", event => {
   }
 
   setTimeout(bindV47, 900);
+})();
+
+
+// v48 spin/start + quiet duplicate Add Bot warnings
+(() => {
+  let v48State = null;
+  let lastBotActionAt = 0;
+
+  function getRoomCode(){
+    return v48State?.roomCode ||
+      localStorage.getItem("beanersRoom") ||
+      localStorage.getItem("beanersRoomCode") ||
+      localStorage.getItem("beanersRoomCodeKey");
+  }
+
+  function bindV48(){
+    const socket = window.socket;
+    if(!socket || socket.__v48Bound) return;
+    socket.__v48Bound = true;
+
+    socket.on("roomState", state => {
+      v48State = state;
+    });
+
+    document.addEventListener("click", event => {
+      const botBtn = event.target.closest(".seatMiniAction");
+      if(botBtn && (botBtn.dataset.action === "addBot" || botBtn.dataset.action === "removeBot")){
+        lastBotActionAt = Date.now();
+      }
+    }, true);
+
+    socket.on("errorMessage", message => {
+      const quiet = [
+        "That seat is already taken.",
+        "That seat is already taken",
+        "Room is already full.",
+        "No empty seats available."
+      ];
+      if(Date.now() - lastBotActionAt < 1500 && quiet.includes(String(message))) return;
+    });
+
+    const spinBtn = document.getElementById("spinBtn");
+    if(spinBtn && !spinBtn.dataset.v48Bound){
+      spinBtn.dataset.v48Bound = "1";
+      spinBtn.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        socket.emit("lobbySpinStarter", { roomCode:getRoomCode() });
+      }, true);
+    }
+
+    const startBtn = document.getElementById("startBtn");
+    if(startBtn && !startBtn.dataset.v48Bound){
+      startBtn.dataset.v48Bound = "1";
+      startBtn.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        socket.emit("lobbyStartGame", { roomCode:getRoomCode() });
+      }, true);
+    }
+
+    socket.on("starterChosen", ({token, name}) => {
+      if(typeof animateStarterWheel === "function"){
+        animateStarterWheel(token, name);
+      } else {
+        const result = document.getElementById("wheelResult");
+        if(result) result.textContent = `${name} Starts!`;
+      }
+    });
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", () => setTimeout(bindV48, 400));
+  } else {
+    setTimeout(bindV48, 400);
+  }
+
+  setTimeout(bindV48, 1000);
+})();
+
+
+// v49 stability layer: token-backed lobby actions, exit, reconnect state
+(() => {
+  let v49State = null;
+
+  function token(){
+    return localStorage.getItem("beanersPlayerToken") ||
+      localStorage.getItem("beanersToken") ||
+      localStorage.getItem("beanersSessionToken") ||
+      localStorage.getItem("SESSION_TOKEN_KEY");
+  }
+
+  function roomCode(){
+    return v49State?.roomCode ||
+      localStorage.getItem("beanersRoom") ||
+      localStorage.getItem("beanersRoomCode") ||
+      localStorage.getItem("beanersRoomCodeKey");
+  }
+
+  function saveSession(data){
+    if(!data) return;
+    if(data.roomCode){
+      localStorage.setItem("beanersRoom", data.roomCode);
+      localStorage.setItem("beanersRoomCode", data.roomCode);
+    }
+    if(data.playerId) localStorage.setItem("beanersPlayerId", data.playerId);
+    if(data.playerToken){
+      localStorage.setItem("beanersPlayerToken", data.playerToken);
+      localStorage.setItem("beanersToken", data.playerToken);
+    }
+  }
+
+  function bindV49(){
+    const socket = window.socket;
+    if(!socket || socket.__v49Bound) return;
+    socket.__v49Bound = true;
+
+    socket.on("roomReady", saveSession);
+    socket.on("joinedRoom", saveSession);
+
+    socket.on("roomState", state => {
+      v49State = state;
+      if(state?.phase === "lobby") document.body.classList.add("inLobbyMode");
+      else document.body.classList.remove("inLobbyMode");
+    });
+
+    document.addEventListener("click", event => {
+      const seat = event.target.closest(".lobbySeat");
+      if(!seat || !v49State || v49State.phase !== "lobby") return;
+
+      const mini = event.target.closest(".seatMiniAction");
+      const seatKey = seat.dataset.seat;
+      const occupant = v49State.players.find(p => p.seatKey === seatKey);
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      let action = "sit";
+      if(mini) action = mini.dataset.action;
+      else if(occupant?.isBot) action = "sit";
+      else if(occupant && occupant.id !== localStorage.getItem("beanersPlayerId")) return;
+
+      socket.emit("seatAction", {
+        roomCode: roomCode(),
+        seatKey,
+        action,
+        playerToken: token()
+      });
+    }, true);
+
+    const exitBtn = document.getElementById("exitXBtn");
+    if(exitBtn && !exitBtn.dataset.v49Bound){
+      exitBtn.dataset.v49Bound = "1";
+      exitBtn.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        if(confirm("Exit game?")){
+          socket.emit("exitGame", {
+            roomCode: roomCode(),
+            playerToken: token()
+          });
+        }
+      }, true);
+    }
+
+    const refreshBtn = document.getElementById("reconnectBtn");
+    if(refreshBtn && !refreshBtn.dataset.v49Bound){
+      refreshBtn.dataset.v49Bound = "1";
+      refreshBtn.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        socket.emit("requestRoomState", {
+          roomCode: roomCode(),
+          playerToken: token()
+        });
+      }, true);
+    }
+
+    socket.on("exitedGame", () => {
+      localStorage.removeItem("beanersRoom");
+      localStorage.removeItem("beanersRoomCode");
+      localStorage.removeItem("beanersPlayerId");
+      localStorage.removeItem("beanersPlayerToken");
+      localStorage.removeItem("beanersToken");
+      location.reload();
+    });
+
+    socket.io?.on?.("reconnect", () => {
+      socket.emit("requestRoomState", {
+        roomCode: roomCode(),
+        playerToken: token()
+      });
+    });
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", () => setTimeout(bindV49, 250));
+  } else {
+    setTimeout(bindV49, 250);
+  }
+
+  setTimeout(bindV49, 800);
 })();
