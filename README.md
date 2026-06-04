@@ -1,8 +1,10 @@
-# Beaners v46 Lobby Buttons + Exit Fix
+# Beaners v47 Lobby Seat Action Fix
 
 Fixes:
-- Explicitly injects Add Bot and Remove Bot buttons into every lobby seat after roomState.
-- Makes the seat itself tappable for sitting.
-- Exit now uses the current saved room and has a server fallback by socket/token.
-- Hides hand/action controls in lobby.
-- Adds v46 markers.
+- Remove Bot button only appears when a bot is actually in that seat.
+- Empty seats show Add Bot only.
+- Seat itself remains tappable to sit.
+- Cleans up Sit Here / side-seat formatting.
+- Replaces duplicate/broken seatAction handlers with one clean server handler.
+- Recovers lobby phase if no cards were dealt.
+- Adds v47 markers.

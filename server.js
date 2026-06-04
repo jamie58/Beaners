@@ -700,17 +700,19 @@ io.on("connection", socket => {
     }
     emitRoom(roomCode);
   });
+
   socket.on("seatAction", ({ roomCode, seatKey, action }) => {
     roomCode = resolveRoomCode(roomCode);
-    let room = rooms[roomCode];
+    const room = rooms[roomCode];
 
-    if(!room){
-      const found = findRoomBySocket(socket);
-      roomCode = found.roomCode;
-      room = found.room;
-    }
+    if(!room) return socket.emit("errorMessage","Room not found.");
 
-    if(!room || room.phase !== "lobby") return socket.emit("errorMessage","Seat selection is only available before the game starts.");
+    // If the room was accidentally marked as playing before cards were dealt,
+    // recover it back to lobby so seating still works.
+    const noCardsDealt = room.players.every(p => !p.hand || p.hand.length === 0) && (!room.deck || room.deck.length === 0);
+    if(room.phase !== "lobby" && noCardsDealt) room.phase = "lobby";
+
+    if(room.phase !== "lobby") return socket.emit("errorMessage","Seat changes are only available in the lobby.");
 
     const allowed = ["top","left","right","bottom"];
     if(!allowed.includes(seatKey)) return socket.emit("errorMessage","Invalid seat.");
@@ -720,6 +722,7 @@ io.on("connection", socket => {
     if(action === "addBot"){
       if(typeof isOwner === "function" && !isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can add bots.");
       if(room.players.some(p => p.seatKey === seatKey)) return socket.emit("errorMessage","That seat is already taken.");
+      if(room.players.length >= 4) return socket.emit("errorMessage","Room is already full.");
       if(!addBot(room, seatKey)) return socket.emit("errorMessage","No empty seats available.");
       emitRoom(roomCode);
       return;
@@ -728,10 +731,9 @@ io.on("connection", socket => {
     if(action === "removeBot"){
       if(typeof isOwner === "function" && !isOwner(room, socket)) return socket.emit("errorMessage","Only the room owner can remove bots.");
       const idx = room.players.findIndex(p => p.isBot && p.seatKey === seatKey);
-      if(idx >= 0){
-        room.players.splice(idx, 1);
-        emitRoom(roomCode);
-      }
+      if(idx < 0) return socket.emit("errorMessage","No bot in that seat.");
+      room.players.splice(idx, 1);
+      emitRoom(roomCode);
       return;
     }
 
@@ -749,7 +751,6 @@ io.on("connection", socket => {
     player.disconnected = false;
     emitRoom(roomCode);
   });
-
 
   socket.on("chooseSeat", ({ roomCode, seatKey }) => {
     roomCode = normaliseRoomCode(roomCode);

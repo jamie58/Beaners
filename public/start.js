@@ -291,3 +291,105 @@ document.addEventListener("click", event => {
 
   setTimeout(bindV46, 900);
 })();
+
+
+// v47 clean lobby seat renderer + click handling
+(() => {
+  let v47State = null;
+
+  function getRoomCode(){
+    return v47State?.roomCode ||
+      localStorage.getItem("beanersRoom") ||
+      localStorage.getItem("beanersRoomCode") ||
+      localStorage.getItem("beanersRoomCodeKey");
+  }
+
+  function renderV47Seats(){
+    if(!v47State || v47State.phase !== "lobby") return;
+
+    document.body.classList.add("inLobbyMode");
+
+    const labels = { top:"Top", left:"Left", right:"Right", bottom:"Bottom" };
+
+    document.querySelectorAll(".lobbySeat").forEach(seat => {
+      const seatKey = seat.dataset.seat;
+      const occupant = v47State.players.find(p => p.seatKey === seatKey);
+
+      let name = seat.querySelector(".seatName");
+      let action = seat.querySelector(".seatAction");
+
+      if(!name){
+        name = document.createElement("span");
+        name.className = "seatName";
+        seat.appendChild(name);
+      }
+
+      if(!action){
+        action = document.createElement("span");
+        action.className = "seatAction";
+        seat.appendChild(action);
+      }
+
+      seat.classList.remove("emptySeat","botSeat","mySeat","humanSeat");
+
+      if(!occupant){
+        seat.classList.add("emptySeat");
+        name.textContent = "Sit Here";
+        action.innerHTML = `<button type="button" class="seatMiniAction addBotBtn" data-action="addBot">Add Bot</button>`;
+      } else if(occupant.isBot){
+        seat.classList.add("botSeat");
+        name.textContent = occupant.name + " (Bot)";
+        action.innerHTML = `<button type="button" class="seatMiniAction removeBotBtn" data-action="removeBot">Remove Bot</button>`;
+      } else {
+        seat.classList.add("humanSeat");
+        if(occupant.id === localStorage.getItem("beanersPlayerId")) seat.classList.add("mySeat");
+        name.textContent = occupant.name;
+        action.innerHTML = "";
+      }
+
+      const tableLabel = document.getElementById(`seat${seatKey.charAt(0).toUpperCase()+seatKey.slice(1)}Label`);
+      if(tableLabel) tableLabel.textContent = occupant ? occupant.name.replace(" Bot","") : labels[seatKey];
+    });
+  }
+
+  function bindV47(){
+    const socket = window.socket;
+    if(!socket || socket.__v47Bound) return;
+    socket.__v47Bound = true;
+
+    socket.on("roomState", state => {
+      v47State = state;
+      setTimeout(renderV47Seats, 0);
+    });
+
+    document.addEventListener("click", event => {
+      const seat = event.target.closest(".lobbySeat");
+      if(!seat || !v47State || v47State.phase !== "lobby") return;
+
+      const mini = event.target.closest(".seatMiniAction");
+      const seatKey = seat.dataset.seat;
+      const occupant = v47State.players.find(p => p.seatKey === seatKey);
+      const roomCode = getRoomCode();
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if(mini){
+        socket.emit("seatAction", { roomCode, seatKey, action: mini.dataset.action });
+        return;
+      }
+
+      if(!occupant || occupant.isBot || occupant.id === localStorage.getItem("beanersPlayerId")){
+        socket.emit("seatAction", { roomCode, seatKey, action:"sit" });
+      }
+    }, true);
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", () => setTimeout(bindV47, 350));
+  } else {
+    setTimeout(bindV47, 350);
+  }
+
+  setTimeout(bindV47, 900);
+})();
