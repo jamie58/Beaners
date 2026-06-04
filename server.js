@@ -536,7 +536,7 @@ io.on("connection", socket => {
       players:[{
         id:socket.id,
         token,
-        name:cleanName(name),
+        name:cleanName(name || "Player"),
         hand:[],
         isDown:false,
         totalScore:0,
@@ -568,8 +568,8 @@ io.on("connection", socket => {
   socket.on("joinRoom", ({roomCode,name,playerToken}) => {
     roomCode = normaliseRoomCode(roomCode);
     const room = rooms[roomCode];
-    if(!room) return socket.emit("errorMessage","Room not found.");
 
+    if(!room) return socket.emit("errorMessage","Room not found.");
     if(room.phase !== "lobby") return socket.emit("errorMessage","Game already started.");
 
     const token = playerToken || createPlayerToken();
@@ -597,7 +597,7 @@ io.on("connection", socket => {
     room.players.push({
       id:socket.id,
       token,
-      name:cleanName(name),
+      name:cleanName(name || "Player"),
       hand:[],
       isDown:false,
       totalScore:0,
@@ -612,7 +612,7 @@ io.on("connection", socket => {
     socket.join(roomCode);
     socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
     emitRoom(roomCode);
-    emitToast(roomCode, `${cleanName(name)} joined the lobby`);
+    emitToast(roomCode, `${cleanName(name || "Player")} joined the lobby`);
   });
   socket.on("addBot", ({roomCode, seatKey})=>{
     roomCode=normaliseRoomCode(roomCode);

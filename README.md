@@ -1,8 +1,9 @@
-# Beaners v37 Create/Join Fix + Version Splash
+# Beaners v38 Create/Join Hard Fix
 
 Fixes:
-- Restores/fixes Create Room and Join Room.
-- Rebuilds create/join handlers so joined players appear in the new lobby.
-- Adds version number to the loading splash screen.
-- Adds appVersion to server room state.
-- Syntax-checked server.js with node --check.
+- Repairs lobby/playingControls markup from the lobby rewrite.
+- Rebuilds the start screen with known-good Create Room and Join Room buttons.
+- Replaces createRoom and joinRoom server handlers with known-good versions.
+- Binds create/join buttons after DOMContentLoaded.
+- Adds v38 to the loading screen.
+- Syntax-checks server.js and app.js before packaging.

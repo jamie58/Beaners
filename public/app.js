@@ -1116,3 +1116,39 @@ document.querySelectorAll(".lobbySeat").forEach(btn => {
     }
   });
 });
+
+
+function bindStartScreenButtons(){
+  const createBtn = $("createBtn");
+  const joinBtn = $("joinBtn");
+
+  if(createBtn){
+    createBtn.onclick = () => {
+      try{ if(typeof unlockAudio === "function") unlockAudio(); }catch(e){}
+      const name = $("nameInput")?.value?.trim() || "Player";
+      socket.emit("createRoom", { name });
+    };
+  }
+
+  if(joinBtn){
+    joinBtn.onclick = () => {
+      try{ if(typeof unlockAudio === "function") unlockAudio(); }catch(e){}
+      const name = $("nameInput")?.value?.trim() || "Player";
+      const roomCode = $("roomInput")?.value?.replace(/\D/g, "").trim();
+      if(!roomCode) return alert("Enter the 4-digit room code.");
+      const playerToken = localStorage.getItem(SESSION_TOKEN_KEY);
+      socket.emit("joinRoom", { roomCode, name, playerToken });
+    };
+  }
+}
+
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", bindStartScreenButtons);
+} else {
+  bindStartScreenButtons();
+}
+
+window.addEventListener("error", event => {
+  console.error("CLIENT ERROR:", event.message, event.error);
+  if(typeof showToast === "function") showToast("Client error — check console");
+});

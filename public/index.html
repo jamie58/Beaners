@@ -18,7 +18,7 @@
     </div>
     <div class="splashTitle">BEANERS</div>
     <div class="splashSub">Loading the table...</div>
-    <div id="splashVersion" class="splashVersion">v37</div>
+    <div id="splashVersion" class="splashVersion">v38</div>
   </div>
   <main>
     <header class="appBar">
@@ -42,14 +42,19 @@
       <p class="startHint">Enter your name first, then create a room or join your mates.</p>
 
       <label>Your player name</label>
-      <input id="nameInput" placeholder="Enter your name" maxlength="20">
+      <input id="nameInput" placeholder="Enter your name" maxlength="20" autocomplete="nickname">
 
       <label>Join code</label>
-      <input id="roomInput" placeholder="Only needed if joining" maxlength="4">
+      <input id="roomInput" placeholder="Only needed if joining" maxlength="4" inputmode="numeric">
+
+      <div class="soundSetup">
+        <label class="inlineSound"><input id="soundEnabledStart" type="checkbox" checked> Sound</label>
+        <label class="inlineSound"><input id="hapticsEnabledStart" type="checkbox" checked> Haptics</label>
+      </div>
 
       <div class="startActions">
-        <button id="createBtn">Create Room</button>
-        <button id="joinBtn">Join Room</button>
+        <button id="createBtn" type="button">Create Room</button>
+        <button id="joinBtn" type="button">Join Room</button>
       </div>
     </section>
 
@@ -75,12 +80,12 @@
           </div>
 
           <div class="seatMap">
-            <button class="lobbySeat seatMapTop" data-seat="top">
+            <button class="lobbySeat seatMapTop" type="button" data-seat="top">
               <span class="seatName">Sit Here</span>
               <span class="seatAction">Tap to sit</span>
             </button>
 
-            <button class="lobbySeat seatMapLeft" data-seat="left">
+            <button class="lobbySeat seatMapLeft" type="button" data-seat="left">
               <span class="seatName">Sit Here</span>
               <span class="seatAction">Tap to sit</span>
             </button>
@@ -92,12 +97,12 @@
               <div id="seatBottomLabel" class="tableSeatName tableBottom">Bottom</div>
             </div>
 
-            <button class="lobbySeat seatMapRight" data-seat="right">
+            <button class="lobbySeat seatMapRight" type="button" data-seat="right">
               <span class="seatName">Sit Here</span>
               <span class="seatAction">Tap to sit</span>
             </button>
 
-            <button class="lobbySeat seatMapBottom" data-seat="bottom">
+            <button class="lobbySeat seatMapBottom" type="button" data-seat="bottom">
               <span class="seatName">Sit Here</span>
               <span class="seatAction">Tap to sit</span>
             </button>
@@ -107,15 +112,15 @@
         <div class="wheelRow">
           <canvas id="starterWheel" width="280" height="280"></canvas>
           <div class="wheelControls">
-            <button id="spinBtn">Spin Wheel</button>
+            <button id="spinBtn" type="button">Spin Wheel</button>
             <div id="wheelResult"></div>
           </div>
         </div>
 
-        <button id="startBtn" class="letsBeanersBtn">Leeeeets Beaners - Scraps On!</button>
+        <button id="startBtn" class="letsBeanersBtn" type="button">Leeeeets Beaners - Scraps On!</button>
       </section>
 
-      <section id="playingControls" class="hidden">
+      <section id="playingControls" class="playingControls hidden">
         <section class="tableShell">
           <div class="tableFelt">
             <div id="seatTop" class="seat seatTop"></div>
