@@ -23,6 +23,12 @@
     return null;
   }
 
+  function showStartDebug(message){
+    const box = $("startDebug");
+    if(box) box.textContent = message;
+    console.log("Beaners start:", message);
+  }
+
   function setBusy(button, busyText){
     if(!button) return () => {};
     const oldText = button.textContent;
@@ -34,10 +40,50 @@
     };
   }
 
+  function enterRoom(data){
+    if(window.beanersEnterRoom){
+      window.beanersEnterRoom(data);
+      return;
+    }
+
+    // Absolute fallback if app.js failed before defining the helper.
+    localStorage.setItem("beanersRoom", data.roomCode);
+    localStorage.setItem("beanersPlayerId", data.playerId);
+    if(data.playerToken) localStorage.setItem("beanersPlayerToken", data.playerToken);
+
+    $("lobby")?.classList.add("hidden");
+    $("game")?.classList.remove("hidden");
+    $("lobbyControls")?.classList.remove("hidden");
+  }
+
   function bind(){
+    const socket = getSocket();
     const createBtn = $("createBtn");
     const joinBtn = $("joinBtn");
     const roomInput = $("roomInput");
+
+    if(!socket) return;
+
+    if(!socket.__beanersV40RoomReadyBound){
+      socket.__beanersV40RoomReadyBound = true;
+
+      socket.on("connect", () => showStartDebug("Connected"));
+      socket.on("connect_error", err => showStartDebug("Connect error: " + err.message));
+
+      socket.on("roomReady", data => {
+        showStartDebug("Room " + data.roomCode + " ready");
+        enterRoom(data);
+      });
+
+      socket.on("joinedRoom", data => {
+        showStartDebug("Joined room " + data.roomCode);
+        enterRoom(data);
+      });
+
+      socket.on("errorMessage", message => {
+        showStartDebug("Error: " + message);
+      });
+    }
 
     if(roomInput){
       roomInput.addEventListener("input", () => {
@@ -45,30 +91,31 @@
       });
     }
 
-    if(createBtn && !createBtn.dataset.v39Bound){
-      createBtn.dataset.v39Bound = "1";
+    if(createBtn && !createBtn.dataset.v40Bound){
+      createBtn.dataset.v40Bound = "1";
       createBtn.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
 
-        const socket = getSocket();
-        if(!socket) return;
-
         const done = setBusy(createBtn, "Creating...");
-        setTimeout(done, 2500);
+        showStartDebug("Creating room...");
 
         socket.emit("createRoom", { name: safeName() });
+
+        setTimeout(() => {
+          done();
+          if(!$("lobby")?.classList.contains("hidden")){
+            showStartDebug("No server response yet — check Render logs");
+          }
+        }, 3500);
       }, true);
     }
 
-    if(joinBtn && !joinBtn.dataset.v39Bound){
-      joinBtn.dataset.v39Bound = "1";
+    if(joinBtn && !joinBtn.dataset.v40Bound){
+      joinBtn.dataset.v40Bound = "1";
       joinBtn.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-
-        const socket = getSocket();
-        if(!socket) return;
 
         const roomCode = cleanRoom();
         if(!roomCode){
@@ -77,20 +124,24 @@
         }
 
         const done = setBusy(joinBtn, "Joining...");
-        setTimeout(done, 2500);
+        showStartDebug("Joining room " + roomCode + "...");
 
         socket.emit("joinRoom", {
           roomCode,
           name: safeName(),
-          playerToken: localStorage.getItem("beanersPlayerToken") || localStorage.getItem("beanersPlayerToken")
+          playerToken: localStorage.getItem("beanersPlayerToken")
         });
+
+        setTimeout(() => {
+          done();
+          if(!$("lobby")?.classList.contains("hidden")){
+            showStartDebug("No server response yet — check room code/logs");
+          }
+        }, 3500);
       }, true);
     }
 
-    console.log("Beaners v39 start buttons bound", {
-      createFound: !!createBtn,
-      joinFound: !!joinBtn
-    });
+    showStartDebug(socket.connected ? "Connected" : "Connecting...");
   }
 
   if(document.readyState === "loading"){
@@ -99,6 +150,5 @@
     bind();
   }
 
-  // Run again after a short delay in case splash/app rendering shifts DOM.
   setTimeout(bind, 500);
 })();

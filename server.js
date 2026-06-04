@@ -564,6 +564,7 @@ io.on("connection", socket => {
     socket.data.playerToken = token;
     socket.join(roomCode);
     socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
+    socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token});
     emitRoom(roomCode);
     console.log("room created", roomCode);
   });
@@ -590,6 +591,7 @@ io.on("connection", socket => {
 
       socket.join(roomCode);
       socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
+    socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token});
       emitRoom(roomCode);
       socket.emit("toast", { message:"Connected" });
       return;
@@ -614,6 +616,7 @@ io.on("connection", socket => {
     ensureOwner(room);
     socket.join(roomCode);
     socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
+    socket.emit("roomReady",{roomCode,playerId:socket.id,playerToken:token});
     emitRoom(roomCode);
     emitToast(roomCode, `${cleanName(name || "Player")} joined the lobby`);
   });
@@ -864,6 +867,7 @@ io.on("connection", socket => {
 
     socket.join(roomCode);
     socket.emit("joinedRoom", { roomCode, playerId: socket.id, playerToken });
+    socket.emit("roomReady", { roomCode, playerId: socket.id, playerToken });
     emitRoom(roomCode);
     socket.emit("toast", { message: "Connected" });
   });

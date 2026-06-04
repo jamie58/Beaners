@@ -297,7 +297,39 @@ $("cancelChoice").onclick = () => {
 
 $("closeScorecard").onclick = () => hideScorecard();
 
+
+window.beanersEnterRoom = function({roomCode, playerId, playerToken}){
+  currentRoomCode = roomCode;
+  myPlayerId = playerId;
+  if(typeof currentPlayerToken !== "undefined") currentPlayerToken = playerToken || currentPlayerToken;
+
+  localStorage.setItem(SESSION_ROOM_KEY, roomCode);
+  localStorage.setItem(SESSION_PLAYER_KEY, playerId);
+  if(playerToken) localStorage.setItem(SESSION_TOKEN_KEY, playerToken);
+
+  const lobby = $("lobby");
+  const game = $("game");
+  const lobbyControls = $("lobbyControls");
+
+  if(lobby) lobby.classList.add("hidden");
+  if(game) game.classList.remove("hidden");
+  if(lobbyControls) lobbyControls.classList.remove("hidden");
+
+  if($("exitXBtn")) $("exitXBtn").classList.remove("hidden");
+  if($("restartGameBtn")) $("restartGameBtn").classList.remove("hidden");
+  if($("reconnectBtn")) $("reconnectBtn").classList.remove("hidden");
+
+  if(typeof hideSplashScreen === "function") hideSplashScreen();
+  if(typeof showToast === "function") showToast("Room ready");
+};
+
+socket.on("roomReady", data => {
+  window.beanersEnterRoom(data);
+});
+
+
 socket.on("joinedRoom", ({roomCode, playerId, playerToken}) => {
+  if(window.beanersEnterRoom) window.beanersEnterRoom({roomCode, playerId, playerToken});
   currentRoomCode = roomCode;
   myPlayerId = playerId;
   currentPlayerToken = playerToken || currentPlayerToken || localStorage.getItem(SESSION_TOKEN_KEY);

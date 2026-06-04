@@ -1,10 +1,8 @@
-# Beaners v39 Create/Join Debug Fix
+# Beaners v40 Create/Join RoomReady Fallback
 
 Fixes:
-- Adds a standalone start.js controller for Create Room / Join Room.
-- start.js binds after DOMContentLoaded and again after 500ms.
-- Exposes the socket globally so start.js and app.js use the same connection.
-- Adds server logs for createRoom and joinRoom requests.
-- Adds small v39 diagnostic marker under the start buttons.
-- Adds v39 to the loading screen.
-- Syntax-checks server.js, app.js and start.js before packaging.
+- Server now emits a dedicated roomReady event after create/join.
+- Client listens for roomReady and force-enters the lobby.
+- start.js displays connection/create/join status under the buttons.
+- If the button greys out and no room appears, the status text will now say whether the server responded.
+- v40 added to splash/start debug.
