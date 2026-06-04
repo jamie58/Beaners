@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v65";
+  const VERSION = window.BEANERS_VERSION || "v67";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -820,9 +820,14 @@ function enableDragDropTargets() {
     }
   }, true);
 
-  socket.on("meldAddOk", () => {
+  socket.on("meldAddOk", data => {
     selected.clear();
-    v62RefreshMeldHints();
+    v62RefreshMeldHints?.();
+    if (data?.swapped) {
+      const el = $("wheelResult");
+      // lightweight visual feedback without adding a new popup layer
+      console.log("Beaner swapped into hand");
+    }
     requestMyHand();
   });
 

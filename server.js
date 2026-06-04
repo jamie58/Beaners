@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
-const GAME_VERSION = 'v65';
+const GAME_VERSION = 'v67';
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 25000 });
@@ -99,6 +99,88 @@ function sortRun(cards,beaner){
   return sortedRunWithBeaners(cards,beaner);
 }
 
+
+function findRunBeanerSwapIndex(meld,card,b){
+  if(!meld||meld.type!=='run') return -1;
+  if(!card||card.rank===b) return -1;
+
+  const beans=meld.cards.filter(c=>c.rank===b);
+  if(!beans.length) return -1;
+
+  const real=meld.cards.filter(c=>c.rank!==b).sort((a,b)=>rankVal(a.rank)-rankVal(b.rank));
+  if(!real.length) return -1;
+
+  const suit=real[0].suit;
+  if(card.suit!==suit) return -1;
+
+  const target=rankVal(card.rank);
+  let beanCursor=0;
+
+  // Exact swaps only: the card must fill a missing rank between two real cards.
+  for(let i=0;i<real.length-1;i++){
+    const cur=rankVal(real[i].rank);
+    const nxt=rankVal(real[i+1].rank);
+
+    for(let v=cur+1; v<nxt && beanCursor<beans.length; v++){
+      const bean=beans[beanCursor++];
+      if(v===target){
+        return meld.cards.findIndex(c=>c.id===bean.id);
+      }
+    }
+  }
+
+  return -1;
+}
+
+function applyCardToMeldWithBeanerSwap(player, meld, card, b){
+  if(!player||!meld||!card) return {ok:false, reason:'Missing card or meld.'};
+
+  const beanIndex=meld.cards.findIndex(c=>c.rank===b);
+
+  // SET SWAP:
+  // 2 real + Beaner stays as-is when another real card is added.
+  // 3 real + Beaner forces the Beaner to be swapped into the player's hand.
+  // If a set already contains a Beaner and the player places the real matching rank,
+  // the real card replaces the Beaner and the player must pick the Beaner up.
+  if(meld.type==='set' && beanIndex>=0 && card.rank!==b){
+    const real=meld.cards.filter(c=>c.rank!==b);
+    const targetRank=real[0]?.rank;
+
+    if(targetRank && card.rank===targetRank && real.length>=3){
+      const beanCard=meld.cards[beanIndex];
+      player.hand=player.hand.filter(c=>c.id!==card.id);
+      meld.cards[beanIndex]=card;
+      player.hand.push(beanCard);
+      return {ok:true, swapped:true};
+    }
+  }
+
+  // RUN SWAP:
+  // The player can only take the Beaner if their card is the exact suited card
+  // represented by the Beaner inside the current run gap.
+  if(meld.type==='run'){
+    const runBeanIndex=findRunBeanerSwapIndex(meld,card,b);
+    if(runBeanIndex>=0){
+      const beanCard=meld.cards[runBeanIndex];
+      player.hand=player.hand.filter(c=>c.id!==card.id);
+      meld.cards[runBeanIndex]=card;
+      meld.cards=sortRun(meld.cards,b);
+      player.hand.push(beanCard);
+      return {ok:true, swapped:true};
+    }
+  }
+
+  // Normal add if no swap applies.
+  if(!canAdd(meld,card,b)){
+    return {ok:false, reason:'Card does not fit that meld.'};
+  }
+
+  player.hand=player.hand.filter(c=>c.id!==card.id);
+  meld.cards.push(card);
+  if(meld.type==='run') meld.cards=sortRun(meld.cards,b);
+  return {ok:true, swapped:false};
+}
+
 function canAdd(meld,card,b){ const cards=[...meld.cards,card]; return meld.type==='set'?isSet(cards,b):isRun(cards,b); }
 function startRound(room){ room.deck=deck(); room.discard=[]; room.tableMelds=[]; room.winnerMessage=''; for(const p of room.players){ p.hand=[]; p.isDown=false; p.hasPickedUp=false; p.lastRoundScore=null; } for(let i=0;i<7;i++) for(const p of room.players){ const c=room.deck.pop(); if(c) p.hand.push(c); } const first=room.deck.pop(); if(first) room.discard.push(first); let idx=room.players.findIndex(p=>p.token===room.starterToken); if(idx<0) idx=0; room.currentPlayerIndex=idx; room.phase='playing'; room.turnStartedAt=Date.now(); }
 function nextTurn(room){ const p=current(room); if(p&&room.turnStartedAt){ p.turnMs += Date.now()-room.turnStartedAt; p.turnCount += 1; } if(p) p.hasPickedUp=false; room.currentPlayerIndex=(room.currentPlayerIndex+1)%room.players.length; room.turnStartedAt=Date.now(); }
@@ -165,10 +247,8 @@ function botAddToExistingMelds(room, bot){
     keepGoing=false;
     for(const card of [...bot.hand]){
       for(const meld of room.tableMelds){
-        if(canAdd(meld,card,b)){
-          bot.hand=bot.hand.filter(c=>c.id!==card.id);
-          meld.cards.push(card);
-          if(meld.type==='run') meld.cards=sortRun(meld.cards,b);
+        const result=applyCardToMeldWithBeanerSwap(bot,meld,card,b);
+        if(result.ok){
           changed=true;
           keepGoing=true;
           break;
@@ -300,17 +380,32 @@ io.on('connection', socket=>{
     if(!c||!m) return;
 
     const b=beaner(room.round);
-    if(!canAdd(m,c,b)) return socket.emit('errorMessage','Card does not fit that meld.');
+    const result=applyCardToMeldWithBeanerSwap(p,m,c,b);
+    if(!result.ok) return socket.emit('errorMessage',result.reason||'Card does not fit that meld.');
 
-    p.hand=p.hand.filter(x=>x.id!==cardId);
-    m.cards.push(c);
-    if(m.type==='run') m.cards=sortRun(m.cards,b);
-
-    socket.emit('meldAddOk',{meldId,cardId});
+    socket.emit('meldAddOk',{meldId,cardId,swapped:!!result.swapped});
     emitRoom(rc);
   });
 
-  socket.on('playOnMeld',({roomCode,playerToken,meldId,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||!p.isDown) return socket.emit('errorMessage','Lay your first meld before adding to any meld.'); const c=p.hand.find(x=>x.id===cardId); const m=room.tableMelds.find(x=>x.id===meldId); if(!c||!m) return; const b=beaner(room.round); if(!canAdd(m,c,b)) return socket.emit('errorMessage','Card does not fit that meld.'); p.hand=p.hand.filter(x=>x.id!==cardId); m.cards.push(c); if(m.type==='run') m.cards=sortRun(m.cards,b); emitRoom(rc); });
+  socket.on('playOnMeld',({roomCode,playerToken,meldId,cardId})=>{
+    const rc=cleanCode(roomCode);
+    const room=rooms[rc];
+    if(!room||room.phase!=='playing') return;
+
+    const p=player(room,socket,playerToken);
+    if(!p) return socket.emit('errorMessage','Could not identify your player.');
+    if(!p.isDown) return socket.emit('errorMessage','Lay your first meld before adding to any meld.');
+
+    const c=p.hand.find(x=>x.id===cardId);
+    const m=room.tableMelds.find(x=>x.id===meldId);
+    if(!c||!m) return;
+
+    const b=beaner(room.round);
+    const result=applyCardToMeldWithBeanerSwap(p,m,c,b);
+    if(!result.ok) return socket.emit('errorMessage',result.reason||'Card does not fit that meld.');
+
+    emitRoom(rc);
+  });
   socket.on('discard',({roomCode,playerToken,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(!p.hasPickedUp&&!(p.isDown&&p.hand.length===1)) return socket.emit('errorMessage','Pick up before discarding.'); const idx=p.hand.findIndex(c=>c.id===cardId); if(idx<0) return; const [c]=p.hand.splice(idx,1); room.discard.push(c); if(p.hand.length===0) return endRound(rc,p); nextTurn(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
   socket.on('nextRound',({roomCode})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='roundOver') return; room.round+=1; const s=seated(room); room.starterToken=s[(room.round-1)%s.length]?.token||room.players[0].token; startRound(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
   socket.on('restartGame',({roomCode})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return; room.round=1; room.phase='lobby'; room.deck=[]; room.discard=[]; room.tableMelds=[]; room.currentPlayerIndex=0; room.starterToken=null; room.roundScores=[]; room.winnerMessage=''; for(const p of room.players){ p.hand=[]; p.isDown=false; p.lastRoundScore=null; p.hasPickedUp=false; p.turnMs=0; p.turnCount=0; if(p.isBot){ /* keep bot seated */ } } emitRoom(rc); });

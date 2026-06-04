@@ -825,3 +825,9 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
 #wheelResult{
   min-height:42px;
 }
+
+
+/* v66 Beaner swap rules */
+.beanerCard{
+  position:relative;
+}
