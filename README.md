@@ -1,9 +1,7 @@
-# Beaners v44 Create Room Client Crash Fix
+# Beaners v45 Seat Bot Buttons
 
-Fixes:
-- Removes old app.js Create/Join/AddBot/FillBots direct handlers.
-- Prevents missing old lobby buttons from crashing app.js.
-- start.js is now the single source of truth for Create/Join.
-- Forces game/lobby screen open on roomReady/joinedRoom.
-- Keeps v43 missing server helper fixes.
-- Adds v44 debug marker.
+Updates:
+- Adds small Add Bot and Remove Bot buttons at the bottom of each seat.
+- Seat itself remains tappable to sit/move.
+- Wheel still requires at least 2 seated players/bots before it can spin.
+- Adds v45 to splash/debug text.

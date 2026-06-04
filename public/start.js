@@ -156,3 +156,31 @@
 
   setTimeout(bind, 500);
 })();
+
+
+// v45 mini bot buttons + seat sitting
+document.addEventListener("click", event => {
+  const seat = event.target.closest(".lobbySeat");
+  if(!seat || !window.socket) return;
+
+  const state = typeof latestLobbyState !== "undefined" ? latestLobbyState : null;
+  if(!state) return;
+
+  const mini = event.target.closest(".seatMiniAction");
+  const seatKey = seat.dataset.seat;
+  const roomCode = state.roomCode || localStorage.getItem("beanersRoom") || localStorage.getItem("beanersRoomCode");
+  const occupant = state.players.find(p => p.seatKey === seatKey);
+
+  if(mini){
+    event.preventDefault();
+    event.stopPropagation();
+    window.socket.emit("seatAction", { roomCode, seatKey, action: mini.dataset.action });
+    return;
+  }
+
+  if(!occupant || occupant.isBot || occupant.id === localStorage.getItem("beanersPlayerId")){
+    event.preventDefault();
+    event.stopPropagation();
+    window.socket.emit("seatAction", { roomCode, seatKey, action:"sit" });
+  }
+}, true);
