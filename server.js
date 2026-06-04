@@ -529,6 +529,7 @@ function isOwner(room, socket){
 }
 io.on("connection", socket => {
   socket.on("createRoom", ({name})=>{
+    console.log("createRoom requested", { socketId: socket.id, name });
     const roomCode = createRoomCode();
     const token = createPlayerToken();
 
@@ -564,9 +565,11 @@ io.on("connection", socket => {
     socket.join(roomCode);
     socket.emit("joinedRoom",{roomCode,playerId:socket.id,playerToken:token});
     emitRoom(roomCode);
+    console.log("room created", roomCode);
   });
   socket.on("joinRoom", ({roomCode,name,playerToken}) => {
     roomCode = normaliseRoomCode(roomCode);
+    console.log("joinRoom requested", { socketId: socket.id, roomCode, name });
     const room = rooms[roomCode];
 
     if(!room) return socket.emit("errorMessage","Room not found.");

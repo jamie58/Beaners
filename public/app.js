@@ -10,7 +10,8 @@ window.addEventListener("load", () => {
   setTimeout(hideSplashScreen, 650);
 });
 
-const socket = io();
+const socket = window.socket || io();
+window.socket = socket;
 const SESSION_ROOM_KEY = "beanersRoomCode";
 const SESSION_PLAYER_KEY = "beanersPlayerId";
 const SESSION_TOKEN_KEY = "beanersPlayerToken";

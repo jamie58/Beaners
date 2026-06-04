@@ -1,9 +1,10 @@
-# Beaners v38 Create/Join Hard Fix
+# Beaners v39 Create/Join Debug Fix
 
 Fixes:
-- Repairs lobby/playingControls markup from the lobby rewrite.
-- Rebuilds the start screen with known-good Create Room and Join Room buttons.
-- Replaces createRoom and joinRoom server handlers with known-good versions.
-- Binds create/join buttons after DOMContentLoaded.
-- Adds v38 to the loading screen.
-- Syntax-checks server.js and app.js before packaging.
+- Adds a standalone start.js controller for Create Room / Join Room.
+- start.js binds after DOMContentLoaded and again after 500ms.
+- Exposes the socket globally so start.js and app.js use the same connection.
+- Adds server logs for createRoom and joinRoom requests.
+- Adds small v39 diagnostic marker under the start buttons.
+- Adds v39 to the loading screen.
+- Syntax-checks server.js, app.js and start.js before packaging.
