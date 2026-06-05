@@ -1003,3 +1003,95 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
   outline:5px solid #22c55e !important;
   box-shadow:0 0 28px rgba(34,197,94,.85) !important;
 }
+
+
+/* v75 UI-only polish: seat press + meld wrapping */
+
+/* Stop the old seat press from looking like it jumps sideways/down. */
+.seat,
+.seat .mini,
+.mini,
+.addBot,
+.removeBot{
+  transform-origin:center center !important;
+  transition:transform .075s ease, filter .075s ease, opacity .075s ease !important;
+  will-change:transform;
+}
+
+.seat:active{
+  transform:scale(.985) !important;
+  filter:brightness(.985) !important;
+}
+
+.seat .mini:active,
+.mini:active,
+.addBot:active,
+.removeBot:active{
+  transform:scale(.965) !important;
+  filter:brightness(.985) !important;
+}
+
+/* Remove any larger inherited active movement from older versions. */
+.seat:active,
+.seat .mini:active{
+  translate:none !important;
+}
+
+/* Let long runs in side player boxes wrap instead of clipping/disappearing. */
+.zoneLeft .zoneMelds,
+.zoneRight .zoneMelds{
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  flex-wrap:wrap !important;
+  align-content:flex-start !important;
+  gap:5px !important;
+  max-height:calc(100% - 26px) !important;
+  padding-bottom:6px !important;
+}
+
+.zoneLeft .restoredMeld,
+.zoneRight .restoredMeld{
+  max-width:100% !important;
+  flex:0 1 auto !important;
+}
+
+.zoneLeft .restoredMeldCards,
+.zoneRight .restoredMeldCards{
+  display:flex !important;
+  flex-wrap:wrap !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  overflow:visible !important;
+  row-gap:3px !important;
+  column-gap:3px !important;
+}
+
+.zoneLeft .restoredMeldCards .smallCard,
+.zoneRight .restoredMeldCards .smallCard{
+  flex:0 0 auto !important;
+}
+
+/* Keep top/bottom more compact but also safe if very long. */
+.zoneTop .restoredMeldCards,
+.zoneBottom .restoredMeldCards{
+  flex-wrap:wrap !important;
+  row-gap:3px !important;
+}
+
+@media(max-width:480px){
+  .zoneLeft .restoredMeldCards .smallCard,
+  .zoneRight .restoredMeldCards .smallCard{
+    width:25px !important;
+    height:36px !important;
+  }
+
+  .zoneLeft .restoredMeldCards .smallCard strong,
+  .zoneRight .restoredMeldCards .smallCard strong{
+    font-size:10px !important;
+  }
+
+  .zoneLeft .restoredMeldCards .smallCard span,
+  .zoneRight .restoredMeldCards .smallCard span{
+    font-size:13px !important;
+  }
+}

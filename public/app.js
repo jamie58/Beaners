@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v74";
+  const VERSION = window.BEANERS_VERSION || "v75";
   const $ = id => document.getElementById(id);
 
   const socket = io();
