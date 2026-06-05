@@ -1,1 +1,1 @@
-window.BEANERS_VERSION = "v73";
+window.BEANERS_VERSION = "v74";

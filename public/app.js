@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v73";
+  const VERSION = window.BEANERS_VERSION || "v74";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -104,13 +104,58 @@ let v63Drag = null;
     const meld = under?.closest?.(".restoredMeld");
     const discard = under?.closest?.("#topDiscard");
 
+    if (v74DiscardDropTargetAt(ev.clientX, ev.clientY)) {
+      if (drag.ghost?.parentNode) drag.ghost.parentNode.removeChild(drag.ghost);
+      if (drag.source) drag.source.classList.remove("dragSource");
+      document.querySelectorAll(".dragOver").forEach(el => el.classList.remove("dragOver"));
+      v74CommitDiscardDrop(drag.cardId);
+      ev.preventDefault();
+      ev.stopPropagation();
+      return;
+    }
+
     if (meld) meld.classList.add("dragOver");
     if (discard) discard.classList.add("dragOver");
 
     ev.preventDefault();
   }
 
-  function v63EndPointerDrag(ev) {
+  
+  function v74DiscardDropTargetAt(x, y) {
+    const candidates = [
+      $("topDiscard"),
+      document.querySelector(".restoredDiscard"),
+      document.querySelector(".centreStack")
+    ].filter(Boolean);
+
+    return candidates.some(el => {
+      const r = el.getBoundingClientRect();
+      const pad = 18;
+      return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
+    });
+  }
+
+  function v74CommitDiscardDrop(cardId) {
+    if (!cardId) return false;
+
+    if (typeof v70ActionLock !== "undefined") v70ActionLock = { name:"discardDrop", at:Date.now() };
+    if (typeof v69LastPickupAt !== "undefined") v69LastPickupAt = Date.now();
+
+    socket.emit("discard", { roomCode, playerToken, cardId });
+
+    selected.clear();
+    if (typeof v62RefreshMeldHints === "function") v62RefreshMeldHints();
+    renderHand();
+
+    setTimeout(() => {
+      socket.emit("requestRoomState", { roomCode, playerToken });
+      if (typeof requestMyHand === "function") requestMyHand();
+    }, 80);
+
+    return true;
+  }
+
+function v63EndPointerDrag(ev) {
     if (!v63Drag) return;
 
     const drag = v63Drag;
@@ -1072,6 +1117,7 @@ function v70HandleControl(target) {
     }
 
     if (target.closest("#topDiscard")) {
+      if (typeof v70ActionLock !== "undefined" && v70ActionLock.name === "discardDrop" && Date.now() - v70ActionLock.at < 700) return true;
       if (selectedOneCardIdForDiscard()) {
         return v70MobileAction("discardToPile", () => {
           discardSelectedCardToPile();
@@ -1170,6 +1216,40 @@ function v70HandleControl(target) {
       ev.preventDefault();
       ev.stopPropagation();
     }
+  }, true);
+
+
+  function v74DocumentPointerUpDiscard(ev) {
+    if (typeof v63Drag === "undefined" || !v63Drag) return;
+    if (!v63Drag.cardId) return;
+    if (!v74DiscardDropTargetAt(ev.clientX, ev.clientY)) return;
+
+    const cardId = v63Drag.cardId;
+    if (v63Drag.ghost?.parentNode) v63Drag.ghost.parentNode.removeChild(v63Drag.ghost);
+    if (v63Drag.source) v63Drag.source.classList.remove("dragSource");
+    v63Drag = null;
+    document.querySelectorAll(".dragOver").forEach(el => el.classList.remove("dragOver"));
+
+    v74CommitDiscardDrop(cardId);
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+
+  document.addEventListener("pointerup", v74DocumentPointerUpDiscard, true);
+  document.addEventListener("touchend", ev => {
+    const t = ev.changedTouches && ev.changedTouches[0];
+    if (!t || typeof v63Drag === "undefined" || !v63Drag) return;
+    if (!v74DiscardDropTargetAt(t.clientX, t.clientY)) return;
+
+    const cardId = v63Drag.cardId;
+    if (v63Drag.ghost?.parentNode) v63Drag.ghost.parentNode.removeChild(v63Drag.ghost);
+    if (v63Drag.source) v63Drag.source.classList.remove("dragSource");
+    v63Drag = null;
+    document.querySelectorAll(".dragOver").forEach(el => el.classList.remove("dragOver"));
+
+    v74CommitDiscardDrop(cardId);
+    ev.preventDefault();
+    ev.stopPropagation();
   }, true);
 
 })();

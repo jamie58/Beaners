@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
-const GAME_VERSION = 'v73';
+const GAME_VERSION = 'v74';
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 25000 });
@@ -411,7 +411,7 @@ io.on('connection', socket=>{
 
     emitRoom(rc);
   });
-  socket.on('discard',({roomCode,playerToken,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(!p.hasPickedUp&&!(p.isDown&&p.hand.length===1)) return socket.emit('errorMessage','Pick up before discarding.'); const idx=p.hand.findIndex(c=>c.id===cardId); if(idx<0) return; const [c]=p.hand.splice(idx,1); room.discard.push(c); if(p.hand.length===0) return endRound(rc,p); nextTurn(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
+  socket.on('discard',({roomCode,playerToken,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(!p.hasPickedUp&&!(p.isDown&&p.hand.length===1)) return socket.emit('errorMessage','Pick up before discarding.'); const idx=p.hand.findIndex(c=>c.id===cardId); if(idx<0) return; const [c]=p.hand.splice(idx,1); room.discard.push(c); if(p.hand.length===0) return endRound(rc,p); nextTurn(room); socket.emit('actionStatus',{action:'discard',ok:true}); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
   socket.on('nextRound',({roomCode})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='roundOver') return; room.round+=1; const s=seated(room); room.starterToken=s[(room.round-1)%s.length]?.token||room.players[0].token; startRound(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
   socket.on('restartGame',({roomCode})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return; const seatedNow=seated(room); room.players=seatedNow.length ? seatedNow : room.players; room.round=1; room.roundScores=[]; room.winnerMessage=''; room.starterToken=seated(room)[randomIndex(seated(room).length)]?.token||room.players[0]?.token||null; for(const p of room.players){ p.hand=[]; p.isDown=false; p.lastRoundScore=null; p.hasPickedUp=false; p.turnMs=0; p.turnCount=0; } startRound(room); emitRoom(rc); if(current(room)?.isBot) botTurn(rc); });
 

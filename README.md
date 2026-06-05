@@ -1,9 +1,10 @@
-# Beaners v73
+# Beaners v74
 
-Built from v72 full project.
+Built from v73 full project.
 
 Fix:
-- Drag/drop onto the discard pile now calls the same discard action as the Discard button.
-- Discard drop clears selection, requests fresh hand/state, and advances the turn.
-- Server emits updated hand/action status immediately after discard.
+- Discard drop now uses a hard coordinate-based drop zone, not just elementFromPoint.
+- Releasing a dragged card anywhere over the discard/centre stack commits the discard.
+- Blocks accidental pickup immediately after discard drop.
+- Requests fresh hand/state after discard drop.
 - Full project assets retained.
