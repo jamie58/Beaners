@@ -1,10 +1,9 @@
-# Beaners v76
+# Beaners v77
 
-Built from v75 full project.
+Built from v76 full project.
 
-Final tweaks:
-- Lobby seat/bot click animations no longer move or jump; they only subtly darken.
-- First round starter is selected by the wheel.
-- Round 2 starter is the next player clockwise after the first starter.
-- Round 3 starter is the next player clockwise again, and so on.
+Styling-only fix:
+- Restores lobby seats around the green table.
+- Prevents seat/bot button press animations from shifting/jumping.
+- No gameplay/socket/server logic changed beyond version label.
 - Full project assets retained.

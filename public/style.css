@@ -1126,3 +1126,147 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
   filter:brightness(.94) !important;
   box-shadow:inset 0 0 0 999px rgba(0,0,0,.05) !important;
 }
+
+
+/* v77 lobby seat positioning fix only */
+/* Restores the 4 seat cards to sit neatly around the outside of the green table. */
+/* No gameplay/socket/server logic changed. */
+
+.lobbyTable{
+  position:relative !important;
+  overflow:visible !important;
+}
+
+#lobby .seat{
+  position:absolute !important;
+  width:210px !important;
+  height:112px !important;
+  max-width:34vw !important;
+  border-radius:22px !important;
+  z-index:8 !important;
+  margin:0 !important;
+  translate:none !important;
+  transform-origin:center center !important;
+}
+
+#lobby .seatTop{
+  top:18px !important;
+  left:50% !important;
+  right:auto !important;
+  bottom:auto !important;
+  transform:translateX(-50%) !important;
+}
+
+#lobby .seatBottom{
+  bottom:18px !important;
+  left:50% !important;
+  right:auto !important;
+  top:auto !important;
+  transform:translateX(-50%) !important;
+}
+
+#lobby .seatLeft{
+  left:18px !important;
+  top:50% !important;
+  right:auto !important;
+  bottom:auto !important;
+  transform:translateY(-50%) !important;
+}
+
+#lobby .seatRight{
+  right:18px !important;
+  top:50% !important;
+  left:auto !important;
+  bottom:auto !important;
+  transform:translateY(-50%) !important;
+}
+
+/* Press feedback without shifting position */
+#lobby .seat:active,
+#lobby .seat:hover,
+#lobby .seat:focus,
+#lobby .seat:focus-visible{
+  translate:none !important;
+}
+
+#lobby .seatTop:active,
+#lobby .seatTop:hover,
+#lobby .seatTop:focus,
+#lobby .seatTop:focus-visible{
+  transform:translateX(-50%) !important;
+  filter:brightness(.96) !important;
+}
+
+#lobby .seatBottom:active,
+#lobby .seatBottom:hover,
+#lobby .seatBottom:focus,
+#lobby .seatBottom:focus-visible{
+  transform:translateX(-50%) !important;
+  filter:brightness(.96) !important;
+}
+
+#lobby .seatLeft:active,
+#lobby .seatLeft:hover,
+#lobby .seatLeft:focus,
+#lobby .seatLeft:focus-visible{
+  transform:translateY(-50%) !important;
+  filter:brightness(.96) !important;
+}
+
+#lobby .seatRight:active,
+#lobby .seatRight:hover,
+#lobby .seatRight:focus,
+#lobby .seatRight:focus-visible{
+  transform:translateY(-50%) !important;
+  filter:brightness(.96) !important;
+}
+
+#lobby .seat .mini,
+#lobby .seat .mini:active,
+#lobby .seat .mini:hover,
+#lobby .seat .mini:focus{
+  transform:none !important;
+  translate:none !important;
+}
+
+#lobby .seat .mini:active{
+  filter:brightness(.94) !important;
+}
+
+/* Mobile tuning */
+@media(max-width:480px){
+  #lobby .seat{
+    width:150px !important;
+    height:92px !important;
+    max-width:36vw !important;
+    border-radius:16px !important;
+  }
+
+  #lobby .seatTop{
+    top:16px !important;
+  }
+
+  #lobby .seatBottom{
+    bottom:16px !important;
+  }
+
+  #lobby .seatLeft{
+    left:10px !important;
+  }
+
+  #lobby .seatRight{
+    right:10px !important;
+  }
+
+  #lobby .seatName{
+    font-size:20px !important;
+    line-height:1.05 !important;
+  }
+
+  #lobby .seatAction .mini,
+  #lobby .mini{
+    font-size:13px !important;
+    padding:5px 12px !important;
+    border-radius:999px !important;
+  }
+}
