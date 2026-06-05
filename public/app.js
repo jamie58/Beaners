@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v69";
+  const VERSION = window.BEANERS_VERSION || "v70";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -980,4 +980,132 @@ setInterval(() => {
       if (me && me.cardCount > 0 && (!hand || hand.length === 0)) requestMyHand();
     }
   }, 1500);
+
+  let v70ActionLock = { name:"", at:0 };
+
+  function v70MobileAction(name, fn) {
+    const now = Date.now();
+    if (v70ActionLock.name === name && now - v70ActionLock.at < 220) return true;
+    v70ActionLock = { name, at: now };
+    fn();
+    return true;
+  }
+
+  function v70RequestFreshStateSoon(delay=90) {
+    setTimeout(() => {
+      if (!roomCode || !playerToken) return;
+      socket.emit("requestRoomState", { roomCode, playerToken });
+      if (typeof requestMyHand === "function") requestMyHand();
+    }, delay);
+  }
+
+  function v70HandleControl(target) {
+    if (!target) return false;
+
+    // Lobby seat/add bot/remove bot.
+    const seat = target.closest(".seat");
+    if (seat && state && state.phase === "lobby") {
+      const key = seat.dataset.seat;
+      const mini = target.closest(".mini");
+      const occupant = state.players.find(p => p.seat === key);
+      const action = mini ? mini.dataset.action : "sit";
+      if (!mini && occupant && !occupant.isBot && occupant.token !== playerToken) return false;
+
+      return v70MobileAction(`seat-${key}-${action}`, () => {
+        socket.emit("seatAction", { roomCode, playerToken, seat: key, action });
+        v70RequestFreshStateSoon();
+      });
+    }
+
+    // Let's Beaners.
+    if (target.closest("#startBtn")) {
+      return v70MobileAction("startGame", () => {
+        socket.emit("startGame", { roomCode });
+        v70RequestFreshStateSoon(160);
+      });
+    }
+
+    // Pickups.
+    if (target.closest("#drawDeck")) {
+      return v70MobileAction("drawDeck", () => {
+        socket.emit("drawDeck", { roomCode, playerToken });
+        v70RequestFreshStateSoon();
+      });
+    }
+
+    if (target.closest("#topDiscard")) {
+      return v70MobileAction("topDiscard", () => {
+        socket.emit("takeTopDiscard", { roomCode, playerToken });
+        v70RequestFreshStateSoon();
+      });
+    }
+
+    if (target.closest("#takePile")) {
+      return v70MobileAction("takePile", () => {
+        socket.emit("takeDiscardPile", { roomCode, playerToken });
+        v70RequestFreshStateSoon();
+      });
+    }
+
+    // Bottom controls.
+    if (target.closest("#sortRank")) {
+      return v70MobileAction("sortRank", () => {
+        if (typeof setHandSortMode === "function") setHandSortMode("rank");
+      });
+    }
+
+    if (target.closest("#sortSuit")) {
+      return v70MobileAction("sortSuit", () => {
+        if (typeof setHandSortMode === "function") setHandSortMode("suit");
+      });
+    }
+
+    if (target.closest("#layMeld")) {
+      return v70MobileAction("layMeld", () => {
+        const ids = [...selected];
+        if (ids.length < 3) return alert("Select at least 3 cards.");
+        socket.emit("layMeld", { roomCode, playerToken, cardIds: ids });
+        selected.clear();
+        if (typeof v62RefreshMeldHints === "function") v62RefreshMeldHints();
+        renderHand();
+        v70RequestFreshStateSoon();
+      });
+    }
+
+    if (target.closest("#discardBtn")) {
+      return v70MobileAction("discard", () => {
+        let ids = [...selected];
+        if (ids.length !== 1 && hand.length === 1) ids = [hand[0].id];
+        if (ids.length !== 1) return alert("Select exactly 1 card to discard.");
+        socket.emit("discard", { roomCode, playerToken, cardId: ids[0] });
+        selected.clear();
+        if (typeof v62RefreshMeldHints === "function") v62RefreshMeldHints();
+        renderHand();
+        v70RequestFreshStateSoon();
+      });
+    }
+
+    return false;
+  }
+
+  document.addEventListener("pointerup", ev => {
+    if (v70HandleControl(ev.target)) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+  }, true);
+
+  // Stop the old delayed click handlers from also firing after our pointerup.
+  document.addEventListener("click", ev => {
+    const controlled = ev.target.closest(".seat,.mini,#startBtn,#drawDeck,#topDiscard,#takePile,#sortRank,#sortSuit,#layMeld,#discardBtn");
+    if (controlled && Date.now() - v70ActionLock.at < 320) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+  }, true);
+
+  socket.on("actionStatus", data => {
+    if (data && data.ok) v70RequestFreshStateSoon(40);
+  });
+
 })();

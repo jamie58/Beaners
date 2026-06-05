@@ -923,3 +923,34 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
   transform:scale(.98);
   filter:brightness(.95);
 }
+
+
+/* v70 clean mobile-first controls */
+.seat,
+.seat .mini,
+#startBtn,
+#drawDeck,
+#topDiscard,
+#takePile,
+#sortRank,
+#sortSuit,
+#layMeld,
+#discardBtn{
+  touch-action:manipulation !important;
+  -webkit-tap-highlight-color:transparent !important;
+  cursor:pointer;
+}
+
+.seat:active,
+.seat .mini:active,
+#startBtn:active,
+#drawDeck:active,
+#topDiscard:active,
+#takePile:active,
+#sortRank:active,
+#sortSuit:active,
+#layMeld:active,
+#discardBtn:active{
+  transform:scale(.985);
+  filter:brightness(.96);
+}

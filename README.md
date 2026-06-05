@@ -1,12 +1,18 @@
-# Beaners v69
+# Beaners v70
 
-Built from latest full project.
+Built from v69 full project.
 
-Fixes:
-- Faster pointer/touch response for lobby seat/bot buttons.
-- Faster pointer/touch response for deck/discard/pile pickup buttons.
-- Persistent hand sorting:
-  - Sort Rank stays applied after server hand refresh.
-  - Sort Suit stays applied after server hand refresh.
-- Keeps v68 button order and meld scrolling.
+Purpose:
+- Clean mobile-first button/tap system without removing existing handlers.
+- Adds one capture-level pointerup action path that fires before delayed click handlers.
+- Suppresses legacy click immediately after the clean pointer action.
+- Applies to:
+  - lobby seats / add bot / remove bot
+  - Let's Beaners
+  - deck pickup
+  - discard pickup
+  - take pile
+  - bottom sort/meld/discard buttons
+- Requests fresh state/hand immediately after pickup and play actions.
+- Keeps persistent hand sorting from v69.
 - Full project assets retained.
