@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
-const GAME_VERSION = 'v78';
+const GAME_VERSION = 'v80';
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 25000 });
@@ -21,9 +21,6 @@ function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.rand
 function deck(){ const d=[]; for(const suit of suits) for(const rank of ranks) d.push({id:crypto.randomBytes(6).toString('hex'),rank,suit}); return shuffle(d); }
 function beaner(round){ return ranks[round-1] || 'A'; }
 function scoreCard(c,b,dbl=false){ let v=c.rank==='A'?15:['J','Q','K'].includes(c.rank)?10:Number(c.rank); if(c.rank===b) v=dbl?100:50; else if(dbl) v*=2; return v; }
-function rankVal(r){ return ranks.indexOf(r); }
-function rankValue(r){ return rankVal(r); }
-
 function findByToken(token){ if(!token) return null; for(const [roomCode,room] of Object.entries(rooms)){ const p=room.players.find(x=>!x.isBot&&x.token===token); if(p) return {roomCode,room,player:p}; } return null; }
 function player(room,socket,token){ if(!room) return null; let p=room.players.find(x=>!x.isBot&&x.id===socket.id); if(!p&&token) p=room.players.find(x=>!x.isBot&&x.token===token); if(p){ p.id=socket.id; p.connected=true; p.lastSeen=Date.now(); socket.data.playerToken=p.token; } return p||null; }
 function seated(room){ return seats.map(s=>room.players.find(p=>p.seat===s)).filter(Boolean); }
@@ -34,118 +31,125 @@ function makePlayer(socket,name){ const t=tok(); socket.data.playerToken=t; retu
 function addBot(room,seat){ if(room.players.length>=4) return false; if(room.players.some(p=>p.seat===seat)) return false; const used=new Set(room.players.map(p=>p.name)); const names=['Bob','Bean Bot','Barry Bot','Bella Bot']; const name=names.find(n=>!used.has(n))||`Bot ${room.players.length+1}`; room.players.push({id:`bot-${tok().slice(0,6)}`,token:`bot-${tok()}`,name,seat,isBot:true,connected:true,hand:[],isDown:false,totalScore:0,lastRoundScore:null,hasPickedUp:false,turnMs:0,turnCount:0}); return true; }
 function recycle(room){ if(room.deck.length||room.discard.length<=1) return; const top=room.discard.pop(); room.deck=shuffle(room.discard); room.discard=[top]; }
 function isSet(cards,b){ if(cards.length<3) return false; const real=cards.filter(c=>c.rank!==b); if(!real.length) return true; return real.every(c=>c.rank===real[0].rank); }
-function isRun(cards,beaner){
-  return canCardsFormRun(cards,beaner);
+function rankVal(r){
+  return ['A','2','3','4','5','6','7','8','9','10','J','Q','K'].indexOf(r);
 }
 
-function sortedRunWithBeaners(cards, beaner){
-  const rankOrder=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-  const real=cards.filter(c=>c.rank!==beaner).sort((a,b)=>rankValue(a.rank)-rankValue(b.rank));
-  const beans=cards.filter(c=>c.rank===beaner);
-  if(!real.length) return cards;
+function circularRankSequences(length){
+  const ranks=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const seqs=[];
+  for(let start=0; start<13; start++){
+    const seq=[];
+    for(let i=0;i<length;i++) seq.push((start+i)%13);
+    seqs.push(seq);
+  }
+  return seqs;
+}
 
-  const result=[];
-  let beanIndex=0;
+function runPlacement(cards,b){
+  if(cards.length<3 || cards.length>13) return null;
 
-  for(let i=0;i<real.length;i++){
-    result.push(real[i]);
+  const real=cards.filter(c=>c.rank!==b);
+  const beans=cards.filter(c=>c.rank===b);
 
-    if(i<real.length-1){
-      const cur=rankValue(real[i].rank);
-      const nxt=rankValue(real[i+1].rank);
-      const gap=nxt-cur-1;
-      for(let g=0;g<gap && beanIndex<beans.length;g++){
-        result.push(beans[beanIndex++]);
+  if(!real.length){
+    return {ok:true, cards:[...cards], seq:[]};
+  }
+
+  const suit=real[0].suit;
+  if(!real.every(c=>c.suit===suit)) return null;
+
+  const realVals=real.map(c=>rankVal(c.rank));
+  if(new Set(realVals).size!==realVals.length) return null;
+
+  const length=cards.length;
+  const seqs=circularRankSequences(length);
+
+  for(const seq of seqs){
+    if(realVals.every(v=>seq.includes(v))){
+      const placed=[];
+      const usedReal=new Set();
+      let beanIndex=0;
+
+      for(const v of seq){
+        const realCard=real.find(c=>rankVal(c.rank)===v && !usedReal.has(c.id));
+        if(realCard){
+          placed.push(realCard);
+          usedReal.add(realCard.id);
+        }else if(beanIndex<beans.length){
+          placed.push(beans[beanIndex++]);
+        }else{
+          placed.length=0;
+          break;
+        }
       }
+
+      if(placed.length===length) return {ok:true, cards:placed, seq};
     }
   }
 
-  while(beanIndex<beans.length){
-    // If beaners remain, place them where they extend the run most naturally.
-    // Put before the first real card if possible; otherwise after.
-    const firstVal=rankValue(real[0].rank);
-    if(firstVal>0) result.unshift(beans[beanIndex++]);
-    else result.push(beans[beanIndex++]);
-  }
-
-  return result;
+  return null;
 }
 
-function canCardsFormRun(cards, beaner){
-  if(cards.length<3) return false;
-  const real=cards.filter(c=>c.rank!==beaner);
-  const beans=cards.length-real.length;
-  if(!real.length) return true;
-  if(!real.every(c=>c.suit===real[0].suit)) return false;
-
-  const vals=real.map(c=>rankValue(c.rank)).sort((a,b)=>a-b);
-  for(let i=1;i<vals.length;i++){
-    if(vals[i]===vals[i-1]) return false;
-  }
-
-  let gaps=0;
-  for(let i=1;i<vals.length;i++) gaps += vals[i]-vals[i-1]-1;
-  if(gaps>beans) return false;
-
-  const min=vals[0];
-  const max=vals[vals.length-1];
-  const totalSpan = max-min+1;
-  const naturalLength = totalSpan + (beans-gaps);
-  return naturalLength <= 13;
+function isRun(cards,b){
+  return !!runPlacement(cards,b);
 }
 
-function meldType(cards,b){ if(isSet(cards,b)) return 'set'; if(isRun(cards,b)) return 'run'; return null; }
-function sortRun(cards,beaner){
-  return sortedRunWithBeaners(cards,beaner);
+function sortRun(cards,b){
+  const placed=runPlacement(cards,b);
+  return placed ? placed.cards : cards;
 }
 
+function sortedRunWithBeaners(cards,b){
+  return sortRun(cards,b);
+}
+
+function canCardsFormRun(cards,b){
+  return isRun(cards,b);
+}
 
 function findRunBeanerSwapIndex(meld,card,b){
   if(!meld||meld.type!=='run') return -1;
   if(!card||card.rank===b) return -1;
 
-  const beans=meld.cards.filter(c=>c.rank===b);
-  if(!beans.length) return -1;
+  const beanCards=meld.cards.filter(c=>c.rank===b);
+  if(!beanCards.length) return -1;
 
-  const real=meld.cards.filter(c=>c.rank!==b).sort((a,b)=>rankVal(a.rank)-rankVal(b.rank));
-  if(!real.length) return -1;
+  const newCards=[...meld.cards];
+  const currentPlacement=runPlacement(newCards,b);
+  if(!currentPlacement) return -1;
 
-  const suit=real[0].suit;
-  if(card.suit!==suit) return -1;
+  const targetVal=rankVal(card.rank);
+  const real=meld.cards.filter(c=>c.rank!==b);
+  const suit=real[0]?.suit;
+  if(!suit || card.suit!==suit) return -1;
 
-  const target=rankVal(card.rank);
-  let beanCursor=0;
-
-  // Exact swaps only: the card must fill a missing rank between two real cards.
-  for(let i=0;i<real.length-1;i++){
-    const cur=rankVal(real[i].rank);
-    const nxt=rankVal(real[i+1].rank);
-
-    for(let v=cur+1; v<nxt && beanCursor<beans.length; v++){
-      const bean=beans[beanCursor++];
-      if(v===target){
-        return meld.cards.findIndex(c=>c.id===bean.id);
-      }
+  for(let i=0;i<currentPlacement.cards.length;i++){
+    const placedCard=currentPlacement.cards[i];
+    if(placedCard.rank===b && currentPlacement.seq[i]===targetVal){
+      return meld.cards.findIndex(c=>c.id===placedCard.id);
     }
   }
 
   return -1;
 }
 
+
+function meldType(cards,b){ if(isSet(cards,b)) return 'set'; if(isRun(cards,b)) return 'run'; return null; }
 function applyCardToMeldWithBeanerSwap(player, meld, card, b){
   if(!player||!meld||!card) return {ok:false, reason:'Missing card or meld.'};
 
   const beanIndex=meld.cards.findIndex(c=>c.rank===b);
 
-  // SET SWAP:
-  // Sets can never exceed 4 cards.
-  // If a set already has 4 cards and contains a Beaner, adding the matching real card
-  // must replace a Beaner and return that Beaner to the player's hand.
+  // SET RULE:
+  // 2 real + Beaner + matching real card: normal add, Beaner can stay.
+  // 3 real + Beaner + matching real card would create 5 cards, so force swap:
+  // the real card replaces the Beaner and the Beaner goes into the player's hand.
   if(meld.type==='set' && beanIndex>=0 && card.rank!==b){
     const real=meld.cards.filter(c=>c.rank!==b);
     const targetRank=real[0]?.rank;
 
-    if(targetRank && card.rank===targetRank && meld.cards.length>=4){
+    if(targetRank && card.rank===targetRank && real.length>=3){
       const beanCard=meld.cards[beanIndex];
       player.hand=player.hand.filter(c=>c.id!==card.id);
       meld.cards[beanIndex]=card;
@@ -174,11 +178,18 @@ function applyCardToMeldWithBeanerSwap(player, meld, card, b){
     return {ok:false, reason:'Card does not fit that meld.'};
   }
 
+  // Safety: set melds cannot exceed 4 total cards.
+  // If a set with a Beaner would become 5 cards, the forced swap above should have handled it.
+  if(meld.type==='set' && meld.cards.length>=4){
+    return {ok:false, reason:'That set is already full.'};
+  }
+
   player.hand=player.hand.filter(c=>c.id!==card.id);
   meld.cards.push(card);
   if(meld.type==='run') meld.cards=sortRun(meld.cards,b);
   return {ok:true, swapped:false};
 }
+
 
 function canAdd(meld,card,b){
   if(meld.type==='set'){
@@ -394,7 +405,7 @@ io.on('connection', socket=>{
   socket.on('drawDeck',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(p.hasPickedUp) return socket.emit('actionStatus',{action:'pickupIgnored',ok:true,reason:'alreadyPickedUp'}); recycle(room); const c=room.deck.pop(); if(c) p.hand.push(c); p.hasPickedUp=true; emitRoom(rc); });
   socket.on('takeTopDiscard',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(p.hasPickedUp) return socket.emit('actionStatus',{action:'pickupIgnored',ok:true,reason:'alreadyPickedUp'}); const c=room.discard.pop(); if(c) p.hand.push(c); p.hasPickedUp=true; emitRoom(rc); });
   socket.on('takeDiscardPile',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||current(room)?.token!==p.token) return socket.emit('errorMessage','Not your turn.'); if(p.hasPickedUp) return socket.emit('actionStatus',{action:'pickupIgnored',ok:true,reason:'alreadyPickedUp'}); p.hand.push(...room.discard); room.discard=[]; p.hasPickedUp=true; emitRoom(rc); });
-  socket.on('layMeld',({roomCode,playerToken,cardIds})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p) return; const b=beaner(room.round); const cards=cardIds.map(id=>p.hand.find(c=>c.id===id)).filter(Boolean); const type=meldType(cards,b); if(!type) return socket.emit('errorMessage','That is not a valid meld.'); p.hand=p.hand.filter(c=>!cardIds.includes(c.id)); p.isDown=true; room.tableMelds.push({id:crypto.randomBytes(5).toString('hex'),ownerToken:p.token,ownerName:p.name,type,cards:type==='run'?sortRun(cards,b):cards}); emitRoom(rc); });
+  socket.on('layMeld',({roomCode,playerToken,cardIds})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p) return; if(cardIds&&p&&cardIds.length>=p.hand.length) return socket.emit('errorMessage','You must keep one card to discard.'); const b=beaner(room.round); const cards=cardIds.map(id=>p.hand.find(c=>c.id===id)).filter(Boolean); const type=meldType(cards,b); if(!type) return socket.emit('errorMessage','That is not a valid meld.'); p.hand=p.hand.filter(c=>!cardIds.includes(c.id)); p.isDown=true; room.tableMelds.push({id:crypto.randomBytes(5).toString('hex'),ownerToken:p.token,ownerName:p.name,type,cards:type==='run'?sortRun(cards,b):cards}); emitRoom(rc); });
   socket.on('addToMeld',({roomCode,playerToken,meldId,cardId})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room||room.phase!=='playing') return; const p=player(room,socket,playerToken); if(!p||!p.isDown) return socket.emit('errorMessage','Lay your first meld before adding to any meld.'); const c=p.hand.find(x=>x.id===cardId); const m=room.tableMelds.find(x=>x.id===meldId); if(!c||!m) return; const b=beaner(room.round); if(!canAdd(m,c,b)) return socket.emit('errorMessage','Card does not fit that meld.'); p.hand=p.hand.filter(x=>x.id!==cardId); m.cards.push(c); if(m.type==='run') m.cards=sortRun(m.cards,b); emitRoom(rc); });
 
   socket.on('meldAdd',({roomCode,playerToken,meldId,cardId})=>{
@@ -446,6 +457,20 @@ io.on('connection', socket=>{
   socket.on('exitGame',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return socket.emit('exitedGame'); const p=player(room,socket,playerToken); if(!p) return socket.emit('exitedGame'); const idx=room.players.findIndex(x=>!x.isBot&&x.token===p.token); if(idx>=0){ if(room.phase==='lobby') room.players.splice(idx,1); else room.players[idx]={...p,id:`bot-${tok().slice(0,6)}`,token:`bot-${tok()}`,name:`${p.name} Bot`,isBot:true,connected:true}; } socket.leave(rc); socket.emit('exitedGame'); if(!room.players.length) delete rooms[rc]; else emitRoom(rc); });
   socket.on('getHand',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return; const p=player(room,socket,playerToken); if(p) socket.emit('yourHand',p.hand||[]); });
   socket.on('forceHand',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return; const p=player(room,socket,playerToken); if(p) socket.emit('yourHand',p.hand||[]); });
+
+  socket.on('clientHeartbeat',({roomCode,playerToken})=>{
+    const rc=cleanCode(roomCode);
+    const room=rooms[rc];
+    if(room){
+      const p=player(room,socket,playerToken);
+      if(p){
+        p.id=socket.id;
+        p.lastSeen=Date.now();
+        socket.join(rc);
+      }
+    }
+    socket.emit('serverHeartbeat',{ok:true,at:Date.now()});
+  });
 
   socket.on('disconnect',()=>{ const f=findByToken(socket.data.playerToken); if(f){ f.player.connected=false; f.player.lastSeen=Date.now(); emitRoom(f.roomCode); } });
 });

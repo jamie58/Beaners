@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v78";
+  const VERSION = window.BEANERS_VERSION || "v80";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -444,7 +444,50 @@ function drawWheel(rotation=0) {
     return ["A","2","3","4","5","6","7","8","9","10","J","Q","K"].indexOf(rank);
   }
 
-  function sortedRunCardsForDisplay(cards) {
+  
+  function v80RunOrderIndex(rank) {
+    return ["A","2","3","4","5","6","7","8","9","10","J","Q","K"].indexOf(rank);
+  }
+
+  function v80SortedRunDisplay(cards) {
+    if (!state || !cards || !cards.length) return cards || [];
+    const beaner = state.beaner;
+    const real = cards.filter(c => c.rank !== beaner);
+    const beans = cards.filter(c => c.rank === beaner);
+    if (!real.length) return cards;
+
+    const vals = real.map(c => v80RunOrderIndex(c.rank));
+    const length = cards.length;
+
+    for (let start=0; start<13; start++) {
+      const seq = [];
+      for (let i=0;i<length;i++) seq.push((start+i)%13);
+      if (!vals.every(v => seq.includes(v))) continue;
+
+      const placed = [];
+      const used = new Set();
+      let beanIndex = 0;
+
+      for (const v of seq) {
+        const rc = real.find(c => v80RunOrderIndex(c.rank) === v && !used.has(c.id));
+        if (rc) {
+          placed.push(rc);
+          used.add(rc.id);
+        } else if (beanIndex < beans.length) {
+          placed.push(beans[beanIndex++]);
+        } else {
+          placed.length = 0;
+          break;
+        }
+      }
+
+      if (placed.length === length) return placed;
+    }
+
+    return cards;
+  }
+
+function sortedRunCardsForDisplay(cards) {
     if (!state || !cards || !cards.length) return cards || [];
     const beaner = state.beaner;
     const real = cards.filter(c => c.rank !== beaner).sort((a,b) => rankIndex(a.rank) - rankIndex(b.rank));
@@ -522,7 +565,7 @@ function renderMeldCard(c) {
       box.dataset.id = m.id;
       box.innerHTML = `
         <div class="meldLabel">${m.type.toUpperCase()}</div>
-        <div class="restoredMeldCards">${(m.type === "run" ? sortedRunCardsForDisplay(m.cards) : m.cards).map(renderMeldCard).join("")}</div>
+        <div class="restoredMeldCards">${(m.type === "run" ? v80SortedRunDisplay(m.cards) : m.cards).map(renderMeldCard).join("")}</div>
       `;
       meldEl.appendChild(box);
     });
@@ -732,6 +775,8 @@ function renderHand() {
   $("layMeld").addEventListener("click", () => {
     const ids = [...selected];
     if (ids.length < 3) return alert("Select at least 3 cards.");
+        if (ids.length >= hand.length) return alert("You must keep one card to discard.");
+        if (ids.length >= hand.length) return alert("You must keep one card to discard.");
     socket.emit("layMeld", { roomCode, playerToken, cardIds: ids });
     selected.clear();
   });
@@ -1311,5 +1356,114 @@ function v70HandleControl(target) {
   }, true);
 
   v78SetConnectionStatus(socket.connected ? "connected" : "connecting");
+
+
+  let v80ReconnectInFlight = false;
+  let v80HeartbeatTimer = null;
+  let v80MissedHeartbeats = 0;
+  let v80RedTimer = null;
+
+  function v80Status(status) {
+    if (typeof v78SetConnectionStatus === "function") {
+      v78SetConnectionStatus(status);
+      return;
+    }
+    const btn = $("refreshBtn");
+    if (!btn) return;
+    btn.classList.remove("connected","disconnected","connecting");
+    btn.classList.add(status);
+  }
+
+  function v80RefreshRoomState() {
+    if (!roomCode || !playerToken) return;
+    socket.emit("rejoinRoom", { roomCode, playerToken });
+    socket.emit("requestRoomState", { roomCode, playerToken });
+    if (typeof requestMyHand === "function") requestMyHand();
+  }
+
+  function v80StableReconnect() {
+    if (v80ReconnectInFlight) return;
+    v80ReconnectInFlight = true;
+    v80Status("connecting");
+
+    try {
+      if (!socket.connected) socket.connect();
+    } catch(e) {}
+
+    setTimeout(() => {
+      v80RefreshRoomState();
+      v80ReconnectInFlight = false;
+      v80Status(socket.connected ? "connected" : "disconnected");
+    }, 700);
+  }
+
+  function v80ScheduleDisconnectStatus() {
+    v80Status("connecting");
+    clearTimeout(v80RedTimer);
+    v80RedTimer = setTimeout(() => {
+      if (!socket.connected) v80Status("disconnected");
+    }, 5000);
+  }
+
+  function v80StartHeartbeat() {
+    if (v80HeartbeatTimer) clearInterval(v80HeartbeatTimer);
+    v80HeartbeatTimer = setInterval(() => {
+      if (!roomCode || !playerToken) return;
+      if (!socket.connected) {
+        v80MissedHeartbeats++;
+        if (v80MissedHeartbeats >= 2) v80StableReconnect();
+        return;
+      }
+      socket.emit("clientHeartbeat", { roomCode, playerToken });
+    }, 10000);
+  }
+
+  socket.on("connect", () => {
+    clearTimeout(v80RedTimer);
+    v80MissedHeartbeats = 0;
+    v80Status("connected");
+    setTimeout(v80RefreshRoomState, 150);
+  });
+
+  socket.on("disconnect", () => {
+    v80ScheduleDisconnectStatus();
+  });
+
+  socket.on("serverHeartbeat", () => {
+    v80MissedHeartbeats = 0;
+    if (socket.connected) v80Status("connected");
+  });
+
+  if (socket.io) {
+    socket.io.on("reconnect_attempt", () => v80Status("connecting"));
+    socket.io.on("reconnect", () => {
+      v80Status("connected");
+      v80StableReconnect();
+    });
+    socket.io.on("reconnect_error", () => v80ScheduleDisconnectStatus());
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      v80StableReconnect();
+    } else {
+      v80Status("connecting");
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    v80StableReconnect();
+  });
+
+  document.addEventListener("pointerup", ev => {
+    const btn = ev.target.closest && ev.target.closest("#refreshBtn");
+    if (!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    v80StableReconnect();
+  }, true);
+
+  v80StartHeartbeat();
+  v80Status(socket.connected ? "connected" : "connecting");
 
 })();

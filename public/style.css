@@ -1310,3 +1310,9 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
 .connStatusBtn:active{
   transform:scale(.96) !important;
 }
+
+
+/* v80 reconnect stability */
+#refreshBtn.connecting{
+  animation:none !important;
+}
