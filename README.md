@@ -1,9 +1,10 @@
-# Beaners v75
+# Beaners v76
 
-Built from v74 full project.
+Built from v75 full project.
 
-UI-only changes:
-- Seat and bot button press animations now scale subtly from the centre instead of shifting/jumping.
-- Left/right meld cards wrap onto new lines so longer runs stay visible.
-- No gameplay/socket/server logic changes beyond version label.
+Final tweaks:
+- Lobby seat/bot click animations no longer move or jump; they only subtly darken.
+- First round starter is selected by the wheel.
+- Round 2 starter is the next player clockwise after the first starter.
+- Round 3 starter is the next player clockwise again, and so on.
 - Full project assets retained.
