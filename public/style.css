@@ -1270,3 +1270,43 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
     border-radius:999px !important;
   }
 }
+
+
+/* v78 connection-status topbar */
+/* Hide restart game button completely; gameplay logic untouched. */
+#restartGameBtn,
+.restartGameBtn{
+  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
+
+#refreshBtn.connStatusBtn,
+.connStatusBtn{
+  color:#fff !important;
+  border:none !important;
+  transition:background .15s ease, box-shadow .15s ease, transform .06s ease !important;
+}
+
+#refreshBtn.connected,
+.connStatusBtn.connected{
+  background:#16a34a !important;
+  box-shadow:0 0 0 3px rgba(22,163,74,.28) !important;
+}
+
+#refreshBtn.disconnected,
+.connStatusBtn.disconnected{
+  background:#dc2626 !important;
+  box-shadow:0 0 0 3px rgba(220,38,38,.28) !important;
+}
+
+#refreshBtn.connecting,
+.connStatusBtn.connecting{
+  background:#2563eb !important;
+  box-shadow:0 0 0 3px rgba(37,99,235,.28) !important;
+}
+
+#refreshBtn:active,
+.connStatusBtn:active{
+  transform:scale(.96) !important;
+}

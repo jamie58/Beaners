@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v77";
+  const VERSION = window.BEANERS_VERSION || "v78";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -1251,5 +1251,65 @@ function v70HandleControl(target) {
     ev.preventDefault();
     ev.stopPropagation();
   }, true);
+
+
+  function v78SetConnectionStatus(status) {
+    const btn = $("refreshBtn");
+    if (!btn) return;
+
+    btn.classList.remove("connected", "disconnected", "connecting");
+    btn.classList.add(status, "connStatusBtn");
+
+    if (status === "connected") {
+      btn.title = "Connected — tap to refresh/reconnect";
+    } else if (status === "disconnected") {
+      btn.title = "Disconnected — tap to reconnect";
+    } else {
+      btn.title = "Connecting...";
+    }
+  }
+
+  function v78ReconnectNow() {
+    v78SetConnectionStatus("connecting");
+
+    try {
+      if (!socket.connected) socket.connect();
+    } catch (e) {}
+
+    setTimeout(() => {
+      if (roomCode && playerToken) {
+        socket.emit("rejoinRoom", { roomCode, playerToken });
+        socket.emit("requestRoomState", { roomCode, playerToken });
+        if (typeof requestMyHand === "function") requestMyHand();
+      }
+      v78SetConnectionStatus(socket.connected ? "connected" : "disconnected");
+    }, 250);
+  }
+
+  socket.on("connect", () => {
+    v78SetConnectionStatus("connected");
+  });
+
+  socket.on("disconnect", () => {
+    v78SetConnectionStatus("disconnected");
+  });
+
+  if (socket.io) {
+    socket.io.on("reconnect_attempt", () => v78SetConnectionStatus("connecting"));
+    socket.io.on("reconnect", () => {
+      v78SetConnectionStatus("connected");
+      v78ReconnectNow();
+    });
+  }
+
+  document.addEventListener("pointerup", ev => {
+    const btn = ev.target.closest && ev.target.closest("#refreshBtn");
+    if (!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    v78ReconnectNow();
+  }, true);
+
+  v78SetConnectionStatus(socket.connected ? "connected" : "connecting");
 
 })();
