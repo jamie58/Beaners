@@ -1,13 +1,12 @@
-# Beaners v68
+# Beaners v69
 
-Built from latest full uploaded project.
+Built from latest full project.
 
 Fixes:
-- Improves tap responsiveness for card selection on mobile.
-- Reduces accidental drag detection from tiny finger movement.
-- Adds fast pointerup handlers for bottom action buttons.
-- Reorders bottom buttons:
-  Sort Rank > Sort Suit > Lay Selected Meld > Discard.
-- Left/right/top/bottom meld areas now horizontally scroll so longer runs are visible.
-- Meld cards no longer clip after 4 cards.
+- Faster pointer/touch response for lobby seat/bot buttons.
+- Faster pointer/touch response for deck/discard/pile pickup buttons.
+- Persistent hand sorting:
+  - Sort Rank stays applied after server hand refresh.
+  - Sort Suit stays applied after server hand refresh.
+- Keeps v68 button order and meld scrolling.
 - Full project assets retained.

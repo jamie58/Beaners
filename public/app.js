@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v68";
+  const VERSION = window.BEANERS_VERSION || "v69";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -10,6 +10,37 @@
   let state = null;
   let hand = [];
   let selected = new Set();
+
+  let v69LastSeatActionAt = 0;
+  let v69LastPickupAt = 0;
+  let handSortMode = localStorage.getItem("beanersHandSortMode") || "";
+
+  function applyHandSort() {
+    if (!handSortMode || !Array.isArray(hand)) return;
+    const rankOrder = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+    const suitOrder = ["♠","♥","♦","♣"];
+
+    if (handSortMode === "rank") {
+      hand.sort((a,b) => {
+        const byRank = rankOrder.indexOf(a.rank) - rankOrder.indexOf(b.rank);
+        return byRank || suitOrder.indexOf(a.suit) - suitOrder.indexOf(b.suit);
+      });
+    }
+
+    if (handSortMode === "suit") {
+      hand.sort((a,b) => {
+        const bySuit = suitOrder.indexOf(a.suit) - suitOrder.indexOf(b.suit);
+        return bySuit || rankOrder.indexOf(a.rank) - rankOrder.indexOf(b.rank);
+      });
+    }
+  }
+
+  function setHandSortMode(mode) {
+    handSortMode = mode;
+    localStorage.setItem("beanersHandSortMode", mode);
+    applyHandSort();
+    renderHand();
+  }
 
   
   
@@ -507,6 +538,7 @@ function renderMeldCard(c) {
   }
 
 function renderHand() {
+    applyHandSort();
     const el = $('hand');
     if (!el) return;
     el.innerHTML = '';
@@ -589,6 +621,7 @@ function renderHand() {
 
   socket.on("yourHand", h => {
     hand = Array.isArray(h) ? h : [];
+    applyHandSort();
     const valid = new Set(hand.map(c => c.id));
     selected = new Set([...selected].filter(id => valid.has(id)));
     renderHand();
@@ -622,6 +655,7 @@ function renderHand() {
   document.addEventListener("click", e => {
     const seat = e.target.closest(".seat");
     if (!seat || !state || state.phase !== "lobby") return;
+    if (Date.now() - v69LastSeatActionAt < 350) return;
     const key = seat.dataset.seat;
     const mini = e.target.closest(".mini");
     const occupant = state.players.find(p => p.seat === key);
@@ -647,9 +681,11 @@ function renderHand() {
     if (confirm("Exit game?")) socket.emit("exitGame", { roomCode, playerToken });
   });
 
-  $("drawDeck").addEventListener("click", () => socket.emit("drawDeck", { roomCode, playerToken }));
-  $("topDiscard").addEventListener("click", () => socket.emit("takeTopDiscard", { roomCode, playerToken }));
-  $("takePile").addEventListener("click", () => socket.emit("takeDiscardPile", { roomCode, playerToken }));
+  $("drawDeck").addEventListener("click", () => { if (Date.now() - v69LastPickupAt < 350) return; socket.emit("drawDeck", { roomCode, playerToken }); });
+  $("topDiscard").addEventListener("click", () => { if (Date.now() - v69LastPickupAt < 350) return; v69LastPickupAt = Date.now();
+      socket.emit("takeTopDiscard", { roomCode, playerToken }); });
+  $("takePile").addEventListener("click", () => { if (Date.now() - v69LastPickupAt < 350) return; v69LastPickupAt = Date.now();
+      socket.emit("takeDiscardPile", { roomCode, playerToken }); });
 
   $("layMeld").addEventListener("click", () => {
     const ids = [...selected];
@@ -666,17 +702,9 @@ function renderHand() {
     selected.clear();
   });
 
-  $("sortRank").addEventListener("click", () => {
-    const order = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
-    hand.sort((a,b) => order.indexOf(a.rank) - order.indexOf(b.rank));
-    renderHand();
-  });
+  $("sortRank").addEventListener("click", () => setHandSortMode("rank"));
 
-  $("sortSuit").addEventListener("click", () => {
-    const order = ["♠","♥","♦","♣"];
-    hand.sort((a,b) => order.indexOf(a.suit) - order.indexOf(b.suit));
-    renderHand();
-  });
+  $("sortSuit").addEventListener("click", () => setHandSortMode("suit"));
 
   $("nextRoundBtn").addEventListener("click", () => {
     if (state && state.phase === 'roundOver') socket.emit("nextRound", { roomCode });
@@ -889,16 +917,62 @@ function enableDragDropTargets() {
     if (typeof v62RefreshMeldHints === "function") v62RefreshMeldHints();
     renderHand();
   });
-  v68BindFastButton("sortRank", "sortRank", () => {
-    const order = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
-    hand.sort((a,b) => order.indexOf(a.rank) - order.indexOf(b.rank));
-    renderHand();
-  });
-  v68BindFastButton("sortSuit", "sortSuit", () => {
-    const order = ["♠","♥","♦","♣"];
-    hand.sort((a,b) => order.indexOf(a.suit) - order.indexOf(b.suit));
-    renderHand();
-  });
+  v68BindFastButton("sortRank", "sortRank", () => setHandSortMode("rank"));
+  v68BindFastButton("sortSuit", "sortSuit", () => setHandSortMode("suit"));
+
+
+  function bindImmediateAction(el, name, fn) {
+    if (!el || el.dataset.immediateBound) return;
+    el.dataset.immediateBound = "1";
+    let lastAt = 0;
+
+    function run(ev) {
+      const now = Date.now();
+      if (now - lastAt < 280) return;
+      lastAt = now;
+      ev.preventDefault();
+      ev.stopPropagation();
+      fn(ev);
+    }
+
+    el.addEventListener("pointerup", run, true);
+    el.addEventListener("touchend", run, true);
+  }
+
+  function bindFastGameplayButtons() {
+    bindImmediateAction($("drawDeck"), "drawDeck", () => {
+      v69LastPickupAt = Date.now();
+      socket.emit("drawDeck", { roomCode, playerToken });
+    });
+
+    bindImmediateAction($("topDiscard"), "topDiscard", () => {
+      socket.emit("takeTopDiscard", { roomCode, playerToken });
+    });
+
+    bindImmediateAction($("takePile"), "takePile", () => {
+      socket.emit("takeDiscardPile", { roomCode, playerToken });
+    });
+  }
+
+
+  function v69LobbyFastSeatHandler(e) {
+    const seat = e.target.closest(".seat");
+    if (!seat || !state || state.phase !== "lobby") return;
+
+    const key = seat.dataset.seat;
+    const mini = e.target.closest(".mini");
+    const occupant = state.players.find(p => p.seat === key);
+    const action = mini ? mini.dataset.action : "sit";
+
+    if (!mini && occupant && !occupant.isBot && occupant.token !== playerToken) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    v69LastSeatActionAt = Date.now();
+    socket.emit("seatAction", { roomCode, playerToken, seat: key, action });
+  }
+
+  document.addEventListener('pointerup', v69LobbyFastSeatHandler, true);
 
 setInterval(() => {
     if (state && state.phase === 'playing') {

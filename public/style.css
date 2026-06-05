@@ -902,3 +902,24 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
   .restoredMeld{ padding:3px !important; }
   .restoredMeldCards{ gap:2px !important; }
 }
+
+
+/* v69 button response + persistent hand sort */
+.seat,
+.seat .mini,
+#drawDeck,
+#topDiscard,
+#takePile,
+.actions button{
+  touch-action:manipulation !important;
+  -webkit-tap-highlight-color:transparent !important;
+}
+
+.actions button:active,
+.seat:active,
+#drawDeck:active,
+#topDiscard:active,
+#takePile:active{
+  transform:scale(.98);
+  filter:brightness(.95);
+}
