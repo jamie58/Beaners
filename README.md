@@ -1,10 +1,9 @@
-# Beaners v71
+# Beaners v72
 
-Built from v70 full project.
+Built from v71 full project.
 
-Fixes:
-- Spin wheel button is handled by the clean mobile-first touch system.
-- Seat/button press animations are more subtle.
-- Tapping discard pile with a selected card discards that card instead of picking up.
-- Recent drag/drop discard suppresses the old pickup click, avoiding the "already picked up" popup.
+Fix:
+- Suppresses accidental “You have already picked up” popup.
+- Pickup attempts after already picking up now silently no-op instead of showing an alert.
+- Extra client guard blocks top discard pickup when a card is selected.
 - Full project assets retained.

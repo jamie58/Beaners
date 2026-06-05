@@ -985,3 +985,5 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
 #discardBtn{
   transition:transform .06s ease, filter .06s ease !important;
 }
+
+/* v72: suppress accidental already-picked-up popup after discard */

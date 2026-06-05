@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v71";
+  const VERSION = window.BEANERS_VERSION || "v72";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -1141,5 +1141,25 @@ function v70HandleControl(target) {
   socket.on("actionStatus", data => {
     if (data && data.ok) v70RequestFreshStateSoon(40);
   });
+
+
+  function v72BlockPickupWhenSelected(target) {
+    const ids = Array.from(selected || []);
+    return ids.length > 0 && target && target.closest && target.closest("#topDiscard");
+  }
+
+  document.addEventListener("pointerup", ev => {
+    if (v72BlockPickupWhenSelected(ev.target)) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+  }, true);
+
+  document.addEventListener("click", ev => {
+    if (v72BlockPickupWhenSelected(ev.target)) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+  }, true);
 
 })();
