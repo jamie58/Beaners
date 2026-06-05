@@ -844,3 +844,61 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
   .meldCards{gap:2px}
   .side .meldCards .card{width:clamp(30px, 13cqw, 46px);height:calc(clamp(30px, 13cqw, 46px) * 1.414)}
 }
+
+
+/* v68 tap responsiveness + meld scrolling + button order */
+.actions{
+  grid-template-columns:repeat(4,1fr) !important;
+}
+.actions button{
+  touch-action:manipulation !important;
+  user-select:none !important;
+  -webkit-user-select:none !important;
+}
+.card{
+  touch-action:manipulation;
+}
+#hand .card{
+  touch-action:none !important;
+}
+.zoneMelds{
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+  flex-wrap:nowrap !important;
+  align-items:flex-start !important;
+  max-height:none !important;
+  min-height:54px !important;
+  padding:3px 3px 8px 3px !important;
+  -webkit-overflow-scrolling:touch !important;
+}
+.zoneLeft .zoneMelds,
+.zoneRight .zoneMelds{
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
+  flex-wrap:nowrap !important;
+  max-width:100% !important;
+}
+.playerZone{
+  overflow:hidden !important;
+}
+.restoredMeld{
+  flex:0 0 auto !important;
+  max-width:none !important;
+}
+.restoredMeldCards{
+  flex-wrap:nowrap !important;
+  overflow:visible !important;
+  min-width:max-content !important;
+}
+.restoredMeldCards .smallCard{
+  flex:0 0 auto !important;
+}
+.zoneLeft,
+.zoneRight{
+  min-width:0 !important;
+}
+@media(max-width:480px){
+  .zoneMelds{ min-height:46px !important; }
+  .restoredMeld{ padding:3px !important; }
+  .restoredMeldCards{ gap:2px !important; }
+}

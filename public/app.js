@@ -13,7 +13,11 @@
 
   
   
-  let v63Drag = null;
+  
+  let v68LastRealDragAt = 0;
+  function v68IsRecentDrag(){ return Date.now() - v68LastRealDragAt < 350; }
+
+let v63Drag = null;
 
   function v63CardFromElement(el) {
     const cardEl = el.closest(".card");
@@ -57,7 +61,7 @@
 
     const dx = Math.abs(ev.clientX - v63Drag.startX);
     const dy = Math.abs(ev.clientY - v63Drag.startY);
-    if (dx > 4 || dy > 4) v63Drag.moved = true;
+    if (dx > 10 || dy > 10) v63Drag.moved = true;
 
     v63Drag.ghost.style.left = `${ev.clientX - v63Drag.offsetX}px`;
     v63Drag.ghost.style.top = `${ev.clientY - v63Drag.offsetY}px`;
@@ -93,6 +97,7 @@
 
     // If it was basically a tap, keep the normal select-card behaviour.
     if (!drag.moved) return;
+    v68LastRealDragAt = Date.now();
 
     if (meld?.dataset?.id) {
       socket.emit("meldAdd", { roomCode, playerToken, meldId: meld.dataset.id, cardId: drag.cardId });
@@ -489,7 +494,19 @@ function renderMeldCard(c) {
     socket.emit('forceHand', { roomCode, playerToken });
   }
 
-  function renderHand() {
+  
+  function v68FastSelectCard(ev, cardId) {
+    if (v68IsRecentDrag()) return;
+    if (typeof v63Drag !== 'undefined' && v63Drag && v63Drag.moved) return;
+    if (ev.pointerType === "mouse") return;
+    selected.has(cardId) ? selected.delete(cardId) : selected.add(cardId);
+    if (typeof v62RefreshMeldHints === "function") v62RefreshMeldHints();
+    renderHand();
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+
+function renderHand() {
     const el = $('hand');
     if (!el) return;
     el.innerHTML = '';
@@ -517,8 +534,9 @@ function renderMeldCard(c) {
       card.addEventListener('pointermove', v63MovePointerDrag);
       card.addEventListener('pointerup', v63EndPointerDrag);
       card.addEventListener('pointercancel', v63CancelPointerDrag);
+      card.addEventListener('pointerup', ev => v68FastSelectCard(ev, c.id));
       if (selected.has(c.id)) card.classList.add('selected');
-      card.addEventListener('click', () => { if (v63Drag) return;
+      card.addEventListener('click', () => { if (v68IsRecentDrag()) return;
         selected.has(c.id) ? selected.delete(c.id) : selected.add(c.id);
         v62RefreshMeldHints();
         renderHand();
@@ -835,6 +853,52 @@ function enableDragDropTargets() {
   document.addEventListener('pointermove', v63MovePointerDrag, { passive:false });
   document.addEventListener('pointerup', v63EndPointerDrag, { passive:false });
   document.addEventListener('pointercancel', v63CancelPointerDrag, { passive:false });
+
+
+  let v68LastAction = { name:"", at:0 };
+  function v68ActionOnce(name, fn) {
+    const now = Date.now();
+    if (v68LastAction.name === name && now - v68LastAction.at < 350) return;
+    v68LastAction = { name, at: now };
+    fn();
+  }
+  function v68BindFastButton(id, name, fn) {
+    const btn = $(id);
+    if (!btn || btn.dataset.v68FastBound) return;
+    btn.dataset.v68FastBound = "1";
+    btn.addEventListener("pointerup", ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      v68ActionOnce(name, fn);
+    }, true);
+  }
+  v68BindFastButton("layMeld", "layMeld", () => {
+    const ids = [...selected];
+    if (ids.length < 3) return alert("Select at least 3 cards.");
+    socket.emit("layMeld", { roomCode, playerToken, cardIds: ids });
+    selected.clear();
+    if (typeof v62RefreshMeldHints === "function") v62RefreshMeldHints();
+    renderHand();
+  });
+  v68BindFastButton("discardBtn", "discard", () => {
+    let ids = [...selected];
+    if (ids.length !== 1 && hand.length === 1) ids = [hand[0].id];
+    if (ids.length !== 1) return alert("Select exactly 1 card to discard.");
+    socket.emit("discard", { roomCode, playerToken, cardId: ids[0] });
+    selected.clear();
+    if (typeof v62RefreshMeldHints === "function") v62RefreshMeldHints();
+    renderHand();
+  });
+  v68BindFastButton("sortRank", "sortRank", () => {
+    const order = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+    hand.sort((a,b) => order.indexOf(a.rank) - order.indexOf(b.rank));
+    renderHand();
+  });
+  v68BindFastButton("sortSuit", "sortSuit", () => {
+    const order = ["♠","♥","♦","♣"];
+    hand.sort((a,b) => order.indexOf(a.suit) - order.indexOf(b.suit));
+    renderHand();
+  });
 
 setInterval(() => {
     if (state && state.phase === 'playing') {
