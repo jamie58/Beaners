@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v80";
+  const VERSION = window.BEANERS_VERSION || "v81";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -1465,5 +1465,125 @@ function v70HandleControl(target) {
 
   v80StartHeartbeat();
   v80Status(socket.connected ? "connected" : "connecting");
+
+
+  let v81HardReconnectRunning = false;
+  let v81LastResumeAt = 0;
+  let v81LastGoodStateAt = Date.now();
+
+  function v81SetStatus(status) {
+    if (typeof v78SetConnectionStatus === "function") {
+      v78SetConnectionStatus(status);
+      return;
+    }
+    if (typeof v80Status === "function") {
+      v80Status(status);
+      return;
+    }
+    const btn = $("refreshBtn");
+    if (!btn) return;
+    btn.classList.remove("connected","disconnected","connecting");
+    btn.classList.add(status);
+  }
+
+  function v81RejoinAndRefresh() {
+    if (!roomCode || !playerToken) return;
+
+    socket.emit("rejoinRoom", { roomCode, playerToken });
+    socket.emit("requestRoomState", { roomCode, playerToken });
+    socket.emit("clientHeartbeat", { roomCode, playerToken });
+
+    if (typeof requestMyHand === "function") requestMyHand();
+  }
+
+  function v81HardReconnect(reason="manual") {
+    const now = Date.now();
+    if (v81HardReconnectRunning && now - v81LastResumeAt < 2500) return;
+
+    v81HardReconnectRunning = true;
+    v81LastResumeAt = now;
+    v81SetStatus("connecting");
+
+    // If the socket looks alive, first try a soft rejoin/refresh.
+    if (socket.connected) {
+      v81RejoinAndRefresh();
+      setTimeout(() => {
+        v81RejoinAndRefresh();
+        v81SetStatus("connected");
+        v81HardReconnectRunning = false;
+      }, 500);
+      return;
+    }
+
+    // If mobile has left the transport stale, force a fresh socket transport.
+    try { socket.disconnect(); } catch(e) {}
+
+    setTimeout(() => {
+      try { socket.connect(); } catch(e) {}
+
+      setTimeout(() => v81RejoinAndRefresh(), 300);
+
+      setTimeout(() => {
+        v81RejoinAndRefresh();
+        v81SetStatus(socket.connected ? "connected" : "disconnected");
+        v81HardReconnectRunning = false;
+      }, 1600);
+    }, 250);
+  }
+
+  // Mark successful state refreshes so resume can decide if it needs a hard refresh.
+  socket.on("roomState", () => {
+    v81LastGoodStateAt = Date.now();
+    if (socket.connected) v81SetStatus("connected");
+  });
+
+  socket.on("yourHand", () => {
+    v81LastGoodStateAt = Date.now();
+    if (socket.connected) v81SetStatus("connected");
+  });
+
+  // Auto reconnect when returning from background/app switch.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      setTimeout(() => v81HardReconnect("visibility"), 120);
+    } else {
+      v81SetStatus("connecting");
+    }
+  });
+
+  // iOS Safari / PWA resume hook.
+  window.addEventListener("pageshow", () => {
+    setTimeout(() => v81HardReconnect("pageshow"), 120);
+  });
+
+  // Browser/app focus hook.
+  window.addEventListener("focus", () => {
+    setTimeout(() => v81HardReconnect("focus"), 120);
+  });
+
+  // Manual reconnect/status button is backup only.
+  document.addEventListener("pointerup", ev => {
+    const btn = ev.target.closest && ev.target.closest("#refreshBtn");
+    if (!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    v81HardReconnect("button");
+  }, true);
+
+  document.addEventListener("click", ev => {
+    const btn = ev.target.closest && ev.target.closest("#refreshBtn");
+    if (!btn) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+  }, true);
+
+  // Watchdog: if the app is visible and no fresh state has arrived for a while, rejoin.
+  setInterval(() => {
+    if (document.visibilityState !== "visible") return;
+    if (!roomCode || !playerToken) return;
+    if (Date.now() - v81LastGoodStateAt > 20000) {
+      v81HardReconnect("watchdog");
+    }
+  }, 10000);
 
 })();

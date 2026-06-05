@@ -1,19 +1,13 @@
-# Beaners v80
+# Beaners v81
 
-Built from v79 full project.
+Built from v80 full project.
 
-Gameplay:
-- Allows wrapped runs such as Q-K-A, K-A-2, Q-K-A-2, and J-Q-K-A-2.
-- Supports Beaner placement/substitution inside wrapped runs.
-- Keeps v79 Beaner set and final-discard rules.
-
-Reconnect stability:
-- Rejoin/refresh on socket reconnect.
-- Rejoin/refresh when returning from background/minimized app.
-- Heartbeat every 10 seconds.
-- Connection status delays red state to avoid flicker during short mobile background disconnects.
-- Single reconnect attempt lock prevents reconnect spam.
-- Rooms stay alive longer, up to about 60 minutes where existing cleanup logic applies.
-- Reconnect button remains emergency manual refresh/rejoin.
-
-Full project assets retained.
+Reconnect/resume improvements:
+- Automatically attempts hard reconnect when returning from another app.
+- Uses visibilitychange, pageshow, and focus events.
+- Manual reconnect/status button remains as backup.
+- Rejoins room, requests room state, requests hand, and sends heartbeat after reconnect.
+- Status turns green once room/hand state returns.
+- Watchdog attempts rejoin if visible app has not received fresh state for 20 seconds.
+- Keeps v80 wrapped run rules and reconnect stability.
+- Full project assets retained.
