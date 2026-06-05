@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v81";
+  const VERSION = window.BEANERS_VERSION || "v82";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -683,7 +683,7 @@ function renderHand() {
   }
 
   socket.on("connect", () => {
-    if (roomCode && playerToken) socket.emit("rejoinRoom", { roomCode, playerToken });
+    if (v82CanAutoReconnect()) socket.emit("rejoinRoom", { roomCode, playerToken });
   });
 
   socket.on("joinedRoom", data => {
@@ -714,7 +714,17 @@ function renderHand() {
 
   socket.on("starterChosen", ({ token, name }) => animateWheel(token, name));
 
-  socket.on("errorMessage", msg => alert(msg));
+  socket.on("errorMessage", msg => {
+    if (String(msg).toLowerCase().includes("room not found")) {
+      const startEl = $("startScreen");
+      const startVisible = startEl && !startEl.classList.contains("hidden");
+      if (startVisible) {
+        v82ClearStaleSession(); // v82 room not found suppress
+        return;
+      }
+    }
+    alert(msg);
+  });
 
   socket.on("exitedGame", () => {
     localStorage.removeItem("beanersRoomCode");
@@ -1343,7 +1353,7 @@ function v70HandleControl(target) {
     socket.io.on("reconnect_attempt", () => v78SetConnectionStatus("connecting"));
     socket.io.on("reconnect", () => {
       v78SetConnectionStatus("connected");
-      v78ReconnectNow();
+      if (v82CanAutoReconnect()) v78ReconnectNow();
     });
   }
 
@@ -1352,7 +1362,7 @@ function v70HandleControl(target) {
     if (!btn) return;
     ev.preventDefault();
     ev.stopPropagation();
-    v78ReconnectNow();
+    if (v82CanAutoReconnect()) v78ReconnectNow();
   }, true);
 
   v78SetConnectionStatus(socket.connected ? "connected" : "connecting");
@@ -1375,6 +1385,8 @@ function v70HandleControl(target) {
   }
 
   function v80RefreshRoomState() {
+    if (!v82CanAutoReconnect()) return;
+
     if (!roomCode || !playerToken) return;
     socket.emit("rejoinRoom", { roomCode, playerToken });
     socket.emit("requestRoomState", { roomCode, playerToken });
@@ -1382,9 +1394,12 @@ function v70HandleControl(target) {
   }
 
   function v80StableReconnect() {
+    if (!v82CanAutoReconnect()) return;
+    v80Status("connecting");
+
     if (v80ReconnectInFlight) return;
     v80ReconnectInFlight = true;
-    v80Status("connecting");
+    if (v82CanAutoReconnect()) v80Status("connecting");
 
     try {
       if (!socket.connected) socket.connect();
@@ -1398,7 +1413,7 @@ function v70HandleControl(target) {
   }
 
   function v80ScheduleDisconnectStatus() {
-    v80Status("connecting");
+    if (v82CanAutoReconnect()) v80Status("connecting");
     clearTimeout(v80RedTimer);
     v80RedTimer = setTimeout(() => {
       if (!socket.connected) v80Status("disconnected");
@@ -1411,7 +1426,7 @@ function v70HandleControl(target) {
       if (!roomCode || !playerToken) return;
       if (!socket.connected) {
         v80MissedHeartbeats++;
-        if (v80MissedHeartbeats >= 2) v80StableReconnect();
+        if (v80MissedHeartbeats >= 2) if (v82CanAutoReconnect()) v80StableReconnect();
         return;
       }
       socket.emit("clientHeartbeat", { roomCode, playerToken });
@@ -1422,7 +1437,7 @@ function v70HandleControl(target) {
     clearTimeout(v80RedTimer);
     v80MissedHeartbeats = 0;
     v80Status("connected");
-    setTimeout(v80RefreshRoomState, 150);
+    if (v82CanAutoReconnect()) setTimeout(v80RefreshRoomState, 150);
   });
 
   socket.on("disconnect", () => {
@@ -1438,21 +1453,21 @@ function v70HandleControl(target) {
     socket.io.on("reconnect_attempt", () => v80Status("connecting"));
     socket.io.on("reconnect", () => {
       v80Status("connected");
-      v80StableReconnect();
+      if (v82CanAutoReconnect()) v80StableReconnect();
     });
     socket.io.on("reconnect_error", () => v80ScheduleDisconnectStatus());
   }
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      v80StableReconnect();
+      if (v82CanAutoReconnect()) v80StableReconnect();
     } else {
-      v80Status("connecting");
+      if (v82CanAutoReconnect()) v80Status("connecting");
     }
   });
 
   window.addEventListener("focus", () => {
-    v80StableReconnect();
+    if (v82CanAutoReconnect()) v80StableReconnect();
   });
 
   document.addEventListener("pointerup", ev => {
@@ -1460,7 +1475,7 @@ function v70HandleControl(target) {
     if (!btn) return;
     ev.preventDefault();
     ev.stopPropagation();
-    v80StableReconnect();
+    if (v82CanAutoReconnect()) v80StableReconnect();
   }, true);
 
   v80StartHeartbeat();
@@ -1486,7 +1501,36 @@ function v70HandleControl(target) {
     btn.classList.add(status);
   }
 
-  function v81RejoinAndRefresh() {
+  
+  function v82CanAutoReconnect() {
+    // Only auto reconnect once the user is genuinely inside an existing room/game.
+    // This prevents "Room not found" dialogs on fresh app launch/name screen.
+    const hasSession = !!(roomCode && playerToken);
+    const gameEl = $("game");
+    const startEl = $("startScreen");
+    const gameVisible = gameEl && !gameEl.classList.contains("hidden");
+    const startVisible = startEl && !startEl.classList.contains("hidden");
+
+    return hasSession && gameVisible && !startVisible;
+  }
+
+  function v82ClearStaleSession() {
+    // If the app is on the name screen, old localStorage room tokens should not cause reconnect popups.
+    const startEl = $("startScreen");
+    const startVisible = startEl && !startEl.classList.contains("hidden");
+    if (startVisible) {
+      roomCode = "";
+      playerToken = "";
+      playerId = "";
+      localStorage.removeItem("beanersRoomCode");
+      localStorage.removeItem("beanersPlayerToken");
+      localStorage.removeItem("beanersPlayerId");
+    }
+  }
+
+function v81RejoinAndRefresh() {
+    if (!v82CanAutoReconnect()) return;
+
     if (!roomCode || !playerToken) return;
 
     socket.emit("rejoinRoom", { roomCode, playerToken });
@@ -1497,12 +1541,14 @@ function v70HandleControl(target) {
   }
 
   function v81HardReconnect(reason="manual") {
+    if (!v82CanAutoReconnect()) return;
+
     const now = Date.now();
     if (v81HardReconnectRunning && now - v81LastResumeAt < 2500) return;
 
     v81HardReconnectRunning = true;
     v81LastResumeAt = now;
-    v81SetStatus("connecting");
+    if (v82CanAutoReconnect()) v81SetStatus("connecting");
 
     // If the socket looks alive, first try a soft rejoin/refresh.
     if (socket.connected) {
@@ -1545,20 +1591,20 @@ function v70HandleControl(target) {
   // Auto reconnect when returning from background/app switch.
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      setTimeout(() => v81HardReconnect("visibility"), 120);
+      if (v82CanAutoReconnect()) setTimeout(() => v81HardReconnect("visibility"), 120);
     } else {
-      v81SetStatus("connecting");
+      if (v82CanAutoReconnect()) v81SetStatus("connecting");
     }
   });
 
   // iOS Safari / PWA resume hook.
   window.addEventListener("pageshow", () => {
-    setTimeout(() => v81HardReconnect("pageshow"), 120);
+    if (v82CanAutoReconnect()) setTimeout(() => v81HardReconnect("pageshow"), 120);
   });
 
   // Browser/app focus hook.
   window.addEventListener("focus", () => {
-    setTimeout(() => v81HardReconnect("focus"), 120);
+    if (v82CanAutoReconnect()) setTimeout(() => v81HardReconnect("focus"), 120);
   });
 
   // Manual reconnect/status button is backup only.
@@ -1567,7 +1613,7 @@ function v70HandleControl(target) {
     if (!btn) return;
     ev.preventDefault();
     ev.stopPropagation();
-    v81HardReconnect("button");
+    if (v82CanAutoReconnect()) v81HardReconnect("button");
   }, true);
 
   document.addEventListener("click", ev => {
@@ -1582,8 +1628,13 @@ function v70HandleControl(target) {
     if (document.visibilityState !== "visible") return;
     if (!roomCode || !playerToken) return;
     if (Date.now() - v81LastGoodStateAt > 20000) {
-      v81HardReconnect("watchdog");
+      if (v82CanAutoReconnect()) v81HardReconnect("watchdog");
     }
   }, 10000);
 
+
+  setTimeout(() => {
+    const startEl = $("startScreen");
+    if (startEl && !startEl.classList.contains("hidden")) v82ClearStaleSession();
+  }, 250);
 })();

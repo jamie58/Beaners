@@ -1322,3 +1322,5 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
 #refreshBtn.connecting{
   animation:none !important;
 }
+
+/* v82: guarded auto reconnect hotfix */

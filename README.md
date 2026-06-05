@@ -1,13 +1,12 @@
-# Beaners v81
+# Beaners v82
 
-Built from v80 full project.
+Built from v81/v80 full project.
 
-Reconnect/resume improvements:
-- Automatically attempts hard reconnect when returning from another app.
-- Uses visibilitychange, pageshow, and focus events.
-- Manual reconnect/status button remains as backup.
-- Rejoins room, requests room state, requests hand, and sends heartbeat after reconnect.
-- Status turns green once room/hand state returns.
-- Watchdog attempts rejoin if visible app has not received fresh state for 20 seconds.
-- Keeps v80 wrapped run rules and reconnect stability.
+Hotfix:
+- Stops auto reconnect from firing on the name/start screen.
+- Suppresses stale “Room not found” popups on fresh app launch.
+- Clears stale roomCode/playerToken if the app is sitting on the start screen.
+- Auto reconnect still runs after you are actually inside a room/game.
+- Manual reconnect button only acts while inside an active room/game.
+- Keeps v80/v81 wrapped runs and reconnect improvements.
 - Full project assets retained.
