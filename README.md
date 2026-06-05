@@ -1,9 +1,9 @@
-# Beaners v72
+# Beaners v73
 
-Built from v71 full project.
+Built from v72 full project.
 
 Fix:
-- Suppresses accidental “You have already picked up” popup.
-- Pickup attempts after already picking up now silently no-op instead of showing an alert.
-- Extra client guard blocks top discard pickup when a card is selected.
+- Drag/drop onto the discard pile now calls the same discard action as the Discard button.
+- Discard drop clears selection, requests fresh hand/state, and advances the turn.
+- Server emits updated hand/action status immediately after discard.
 - Full project assets retained.

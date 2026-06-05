@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v72";
+  const VERSION = window.BEANERS_VERSION || "v73";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -140,11 +140,7 @@ let v63Drag = null;
     }
 
     if (discard) {
-      if (typeof v70ActionLock !== "undefined") v70ActionLock = { name:"discardToPile", at:Date.now() };
-      socket.emit("discard", { roomCode, playerToken, cardId: drag.cardId });
-      selected.clear();
-      v62RefreshMeldHints?.();
-      renderHand();
+      discardCardAndRefresh(drag.cardId);
       ev.preventDefault();
       return;
     }
@@ -864,7 +860,7 @@ function enableDragDropTargets() {
 
     if (discard) {
       discard.classList.remove("dragOver");
-      socket.emit("discard", { roomCode, playerToken, cardId });
+      discardCardAndRefresh(cardId);
     }
   }, true);
 
@@ -1002,20 +998,34 @@ setInterval(() => {
   }
 
   
-  function selectedOneCardIdForDiscard() {
+  
+  function discardCardAndRefresh(cardId) {
+    if (!cardId) return false;
+    if (typeof v70ActionLock !== "undefined") v70ActionLock = { name:"discardToPile", at:Date.now() };
+    if (typeof v69LastPickupAt !== "undefined") v69LastPickupAt = Date.now();
+
+    socket.emit("discard", { roomCode, playerToken, cardId });
+
+    selected.clear();
+    if (typeof v62RefreshMeldHints === "function") v62RefreshMeldHints();
+    renderHand();
+
+    setTimeout(() => {
+      socket.emit("requestRoomState", { roomCode, playerToken });
+      if (typeof requestMyHand === "function") requestMyHand();
+    }, 90);
+
+    return true;
+  }
+
+function selectedOneCardIdForDiscard() {
     const ids = Array.from(selected || []);
     return ids.length === 1 ? ids[0] : null;
   }
 
   function discardSelectedCardToPile() {
     const cardId = selectedOneCardIdForDiscard();
-    if (!cardId) return false;
-    socket.emit("discard", { roomCode, playerToken, cardId });
-    selected.clear();
-    if (typeof v62RefreshMeldHints === "function") v62RefreshMeldHints();
-    renderHand();
-    if (typeof v70RequestFreshStateSoon === "function") v70RequestFreshStateSoon();
-    return true;
+    return discardCardAndRefresh(cardId);
   }
 
 function v70HandleControl(target) {
