@@ -1,6 +1,6 @@
 
 (() => {
-  const VERSION = window.BEANERS_VERSION || "v70";
+  const VERSION = window.BEANERS_VERSION || "v71";
   const $ = id => document.getElementById(id);
 
   const socket = io();
@@ -140,6 +140,7 @@ let v63Drag = null;
     }
 
     if (discard) {
+      if (typeof v70ActionLock !== "undefined") v70ActionLock = { name:"discardToPile", at:Date.now() };
       socket.emit("discard", { roomCode, playerToken, cardId: drag.cardId });
       selected.clear();
       v62RefreshMeldHints?.();
@@ -763,7 +764,8 @@ function enableDragDropTargets() {
         e.stopPropagation();
         discardTarget.classList.remove("dragOver");
         const cardId = e.dataTransfer.getData("text/plain");
-        if (cardId) socket.emit("discard", { roomCode, playerToken, cardId });
+        if (cardId) if (typeof v70ActionLock !== "undefined") v70ActionLock = { name:"discardToPile", at:Date.now() };
+      socket.emit("discard", { roomCode, playerToken, cardId });
       });
     }
 
@@ -999,7 +1001,33 @@ setInterval(() => {
     }, delay);
   }
 
-  function v70HandleControl(target) {
+  
+  function selectedOneCardIdForDiscard() {
+    const ids = Array.from(selected || []);
+    return ids.length === 1 ? ids[0] : null;
+  }
+
+  function discardSelectedCardToPile() {
+    const cardId = selectedOneCardIdForDiscard();
+    if (!cardId) return false;
+    socket.emit("discard", { roomCode, playerToken, cardId });
+    selected.clear();
+    if (typeof v62RefreshMeldHints === "function") v62RefreshMeldHints();
+    renderHand();
+    if (typeof v70RequestFreshStateSoon === "function") v70RequestFreshStateSoon();
+    return true;
+  }
+
+function v70HandleControl(target) {
+
+    if (target.closest("#spinBtn")) {
+      return v70MobileAction("spinWheel", () => {
+        const result = $("wheelResult");
+        if (result) result.textContent = "Spinning...";
+        socket.emit("spinStarter", { roomCode });
+      });
+    }
+
     if (!target) return false;
 
     // Lobby seat/add bot/remove bot.
@@ -1034,6 +1062,12 @@ setInterval(() => {
     }
 
     if (target.closest("#topDiscard")) {
+      if (selectedOneCardIdForDiscard()) {
+        return v70MobileAction("discardToPile", () => {
+          discardSelectedCardToPile();
+        });
+      }
+
       return v70MobileAction("topDiscard", () => {
         socket.emit("takeTopDiscard", { roomCode, playerToken });
         v70RequestFreshStateSoon();
@@ -1097,7 +1131,7 @@ setInterval(() => {
 
   // Stop the old delayed click handlers from also firing after our pointerup.
   document.addEventListener("click", ev => {
-    const controlled = ev.target.closest(".seat,.mini,#startBtn,#drawDeck,#topDiscard,#takePile,#sortRank,#sortSuit,#layMeld,#discardBtn");
+    const controlled = ev.target.closest(".seat,.mini,#spinBtn,#startBtn,#drawDeck,#topDiscard,#takePile,#sortRank,#sortSuit,#layMeld,#discardBtn");
     if (controlled && Date.now() - v70ActionLock.at < 320) {
       ev.preventDefault();
       ev.stopPropagation();

@@ -1,18 +1,10 @@
-# Beaners v70
+# Beaners v71
 
-Built from v69 full project.
+Built from v70 full project.
 
-Purpose:
-- Clean mobile-first button/tap system without removing existing handlers.
-- Adds one capture-level pointerup action path that fires before delayed click handlers.
-- Suppresses legacy click immediately after the clean pointer action.
-- Applies to:
-  - lobby seats / add bot / remove bot
-  - Let's Beaners
-  - deck pickup
-  - discard pickup
-  - take pile
-  - bottom sort/meld/discard buttons
-- Requests fresh state/hand immediately after pickup and play actions.
-- Keeps persistent hand sorting from v69.
+Fixes:
+- Spin wheel button is handled by the clean mobile-first touch system.
+- Seat/button press animations are more subtle.
+- Tapping discard pile with a selected card discards that card instead of picking up.
+- Recent drag/drop discard suppresses the old pickup click, avoiding the "already picked up" popup.
 - Full project assets retained.

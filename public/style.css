@@ -954,3 +954,34 @@ input{width:100%;padding:14px;border-radius:14px;border:2px solid #3b1d77;font:i
   transform:scale(.985);
   filter:brightness(.96);
 }
+
+
+/* v71 subtle touch feedback + discard/spin fixes */
+.seat:active,
+.seat .mini:active,
+#spinBtn:active,
+#startBtn:active,
+#drawDeck:active,
+#topDiscard:active,
+#takePile:active,
+#sortRank:active,
+#sortSuit:active,
+#layMeld:active,
+#discardBtn:active{
+  transform:scale(.995) !important;
+  filter:brightness(.985) !important;
+}
+
+.seat,
+.seat .mini,
+#spinBtn,
+#startBtn,
+#drawDeck,
+#topDiscard,
+#takePile,
+#sortRank,
+#sortSuit,
+#layMeld,
+#discardBtn{
+  transition:transform .06s ease, filter .06s ease !important;
+}
