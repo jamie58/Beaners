@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const crypto = require('crypto');
-const GAME_VERSION = 'v82';
+const GAME_VERSION = 'v83';
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' }, pingInterval: 10000, pingTimeout: 25000 });
@@ -457,20 +457,6 @@ io.on('connection', socket=>{
   socket.on('exitGame',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return socket.emit('exitedGame'); const p=player(room,socket,playerToken); if(!p) return socket.emit('exitedGame'); const idx=room.players.findIndex(x=>!x.isBot&&x.token===p.token); if(idx>=0){ if(room.phase==='lobby') room.players.splice(idx,1); else room.players[idx]={...p,id:`bot-${tok().slice(0,6)}`,token:`bot-${tok()}`,name:`${p.name} Bot`,isBot:true,connected:true}; } socket.leave(rc); socket.emit('exitedGame'); if(!room.players.length) delete rooms[rc]; else emitRoom(rc); });
   socket.on('getHand',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return; const p=player(room,socket,playerToken); if(p) socket.emit('yourHand',p.hand||[]); });
   socket.on('forceHand',({roomCode,playerToken})=>{ const rc=cleanCode(roomCode); const room=rooms[rc]; if(!room) return; const p=player(room,socket,playerToken); if(p) socket.emit('yourHand',p.hand||[]); });
-
-  socket.on('clientHeartbeat',({roomCode,playerToken})=>{
-    const rc=cleanCode(roomCode);
-    const room=rooms[rc];
-    if(room){
-      const p=player(room,socket,playerToken);
-      if(p){
-        p.id=socket.id;
-        p.lastSeen=Date.now();
-        socket.join(rc);
-      }
-    }
-    socket.emit('serverHeartbeat',{ok:true,at:Date.now()});
-  });
 
   socket.on('disconnect',()=>{ const f=findByToken(socket.data.playerToken); if(f){ f.player.connected=false; f.player.lastSeen=Date.now(); emitRoom(f.roomCode); } });
 });

@@ -1,12 +1,18 @@
-# Beaners v82
+# Beaners v83
 
-Built from v81/v80 full project.
+Built from v82/v80 full project.
 
-Hotfix:
-- Stops auto reconnect from firing on the name/start screen.
-- Suppresses stale “Room not found” popups on fresh app launch.
-- Clears stale roomCode/playerToken if the app is sitting on the start screen.
-- Auto reconnect still runs after you are actually inside a room/game.
-- Manual reconnect button only acts while inside an active room/game.
-- Keeps v80/v81 wrapped runs and reconnect improvements.
+Purpose:
+- Fix excessive WebSocket bandwidth usage.
+- Removes aggressive reconnect traffic:
+  - no 10-second heartbeat
+  - no watchdog polling
+  - no repeated automatic room/hand refresh loop
+- Keeps simple low-bandwidth reconnect:
+  - one reconnect/rejoin/refresh on app resume/focus/pageshow
+  - manual refresh button as backup
+  - 4-second cooldown to prevent reconnect storms
+  - red status delayed for 5 seconds
+- Keeps wrapped run support from v80.
+- Keeps v79 gameplay rules where present.
 - Full project assets retained.
